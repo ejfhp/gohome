@@ -38,7 +38,7 @@ func TestDoTurnOn(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	const cmd = "*1*1*14##"
+	const cmd = "*1*0*56##"
 	if !h.Do(cmd) {
 		t.Logf("Send message failed failed.")
 		t.Fail()
@@ -56,7 +56,7 @@ func TestAsk(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	const query = "*#1*14##"
+	const query = "*#1*0##"
 	answer := h.Ask(query)
 	if len(answer) < 1 {
 		t.Logf("Query failed.")

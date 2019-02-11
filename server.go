@@ -77,11 +77,16 @@ func NewCable(address string) (Cable, bool) {
 }
 
 func (c *cable) sendCommand(message string) bool {
-	_, err := c.conn.Write([]byte(SystemMessages["OPEN_COMMAND_SESSION"]))
-	if err != nil {
-		logError(ConnectionError{"NOSEND", c.address, err})
+	ok := c.send(SystemMessages["OPEN_COMMAND_SESSION"])
+	if !ok {
+		return false
 	}
-	ok := c.ack()
+	ok = c.ack()
+	if !ok {
+		return false
+	}
+	ok = c.send(message)
+	ok = c.ack()
 	return ok
 }
 
