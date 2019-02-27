@@ -101,19 +101,15 @@ func (c *cable) sendRequest(request string) []string {
 		return answers
 	}
 	ok = c.send(request)
-	a, ok := c.receive()
-	if ok {
-		if !(isAck(a)) {
+	var end bool
+	for ok && !end {
+		var a string
+		a, ok = c.receive()
+		end = isAck(a)
+		if !end {
 			answers = append(answers, a)
 		}
 	}
-	// for !ack && ok {
-	// 	a, ack, ok := c.answer()
-	// 	log.Printf("a: %s, ack: %t, ok: %t", a, ack, ok)
-	// 	if !ack && ok {
-	// 		answers = append(answers, a)
-	// 	}
-	// }
 	return answers
 }
 
@@ -136,7 +132,7 @@ func (c *cable) ack() bool {
 	return isAck(msg)
 }
 
-//returns answer, ack/nak, ok
+//returns answer, ok
 func (c *cable) receive() (string, bool) {
 	msg := make([]byte, 0, 20)
 	b := make([]byte, 1)
