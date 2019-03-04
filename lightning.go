@@ -4,22 +4,7 @@ import (
 	"fmt"
 )
 
-type What string
-type Who string
-type Where string
-type Dimension string
-type Value string
-
-const (
-	Scenario    Who = "0"
-	Lightning   Who = "1"
-	Automation  Who = "2"
-	Load        Who = "3"
-	Temperature Who = "4"
-	Alarm       Who = "5"
-	CEN         Who = "15"
-	Custom      Who = "9"
-)
+const Lightning Who = "1"
 
 const (
 	TURN_OFF         What = "0"
@@ -56,10 +41,8 @@ const (
 	JOLLY            What = "1000"
 )
 
-const (
-	GENERAL Where = "0"
-)
-
-func (w What) Token() string {
-	return fmt.Sprintf("*%s", w)
+//NewCommand build a new Command to send to the home plant
+func NewCommand(who Who, what What, where Where) Command {
+	cmd := fmt.Sprintf("*%s*%s*%s##", who, what, where)
+	return Command(cmd)
 }

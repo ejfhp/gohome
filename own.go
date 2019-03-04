@@ -16,6 +16,13 @@ var errors = map[string]string{
 	"NAK":     "MESSAGE NOT ACEPTED",
 }
 
+type What string
+type Who string
+type Dimension string
+type Value string
+type Where string
+type Command string
+
 //ConnectionError wraps socket communicatin errors
 type ConnectionError struct {
 	code   string
@@ -179,14 +186,14 @@ func NewHome(cable Cable) *Home {
 }
 
 //Do some action with your home
-func (h *Home) Do(command string) bool {
-	return h.cable.sendCommand(command)
+func (h *Home) Do(command Command) bool {
+	return h.cable.sendCommand(string(command))
 }
 
 //Ask the system
-func (h *Home) Ask(request string) []string {
+func (h *Home) Ask(request Command) []string {
 	log.Printf("Home.Ask")
-	return h.cable.sendRequest(request)
+	return h.cable.sendRequest(string(request))
 }
 
 func logError(err error) {
