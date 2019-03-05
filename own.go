@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-var errors = map[string]string{
+var connErr = map[string]string{
 	"RESFAIL": "FAILED TO RESOLVE ADDRESS",
 	"NOCONN":  "FAILED TO CONNECT",
 	"NOSEND":  "FAILED TO SEND TO SERVER",
@@ -31,7 +31,7 @@ type ConnectionError struct {
 }
 
 func (ce ConnectionError) Error() string {
-	return fmt.Sprintf("CONNECTION ERROR: %s, ADDRESS: %s, CAUSE: %v", errors[ce.code], ce.server, ce.cause)
+	return fmt.Sprintf("CONNECTION ERROR: %s, ADDRESS: %s, CAUSE: %v", connErr[ce.code], ce.server, ce.cause)
 }
 
 //HomeError wraps OWN errors
@@ -42,7 +42,7 @@ type HomeError struct {
 }
 
 func (he HomeError) Error() string {
-	return fmt.Sprintf("MY HOME ERROR: '%s', SENT MESSAGE: '%s', SERVER ANSWER: '%s'", errors[he.code], he.incoming, he.answer)
+	return fmt.Sprintf("MY HOME ERROR: '%s', SENT MESSAGE: '%s', SERVER ANSWER: '%s'", connErr[he.code], he.incoming, he.answer)
 }
 
 // SystemMessages contains the OpenWebNet codes for various system messages

@@ -1,7 +1,6 @@
 package gohome_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/savardiego/gohome"
@@ -9,6 +8,9 @@ import (
 
 func TestNewCommand(t *testing.T) {
 	plant := getTestPlant()
-	command := gohome.NewCommand(gohome.Lightning, gohome.ON_30_SEC, plant.AddressOfLight("kitchen", "table"))
-	fmt.Printf("Value %s\n", command)
+	command := gohome.NewCommand(gohome.Lightning, gohome.TURN_ON, plant.AddressOfLight("kitchen", "table"))
+	expected := gohome.Command("*1*1*11##")
+	if command != expected {
+		t.Errorf("Wrong command %s, expected was %s", command, expected)
+	}
 }
