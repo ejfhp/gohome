@@ -1,4 +1,4 @@
-package gohome_test
+package own_test
 
 import (
 	"fmt"

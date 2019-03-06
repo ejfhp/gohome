@@ -1,9 +1,7 @@
-package gohome_test
+package own_test
 
 import (
 	"testing"
-
-	"github.com/savardiego/gohome"
 )
 
 func TestNewCommand(t *testing.T) {

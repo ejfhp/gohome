@@ -1,4 +1,4 @@
-package gohome
+package own
 
 import (
 	"fmt"

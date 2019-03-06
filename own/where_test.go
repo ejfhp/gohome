@@ -1,11 +1,9 @@
-package gohome_test
+package own_test
 
 import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/savardiego/gohome"
 )
 
 func getTestPlant() *gohome.Plant {
