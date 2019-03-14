@@ -4,27 +4,29 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/savardiego/gohome/own"
 )
 
-func getTestPlant() *gohome.Plant {
+func getTestPlant() *own.Plant {
 	lightK := map[string]int{"table": 1, "main": 2}
 	lightL := map[string]int{"sofa": 1, "tv": 2}
 	lightR := map[string]int{"main": 1, "right": 2, "left": 3}
-	ambK := gohome.Ambient{Num: 1, Lights: lightK}
-	ambL := gohome.Ambient{Num: 2, Lights: lightL}
-	ambR := gohome.Ambient{Num: 3, Lights: lightR}
-	casa := gohome.Plant{Name: "casa", Num: 1, Address: "192.168.0.35:20000"}
-	casa.Ambients = map[string]gohome.Ambient{"kitchen": ambK, "living": ambL, "bedroom": ambR}
+	ambK := own.Ambient{Num: 1, Lights: lightK}
+	ambL := own.Ambient{Num: 2, Lights: lightL}
+	ambR := own.Ambient{Num: 3, Lights: lightR}
+	casa := own.Plant{Name: "casa", Num: 1, Address: "192.168.0.35:20000"}
+	casa.Ambients = map[string]own.Ambient{"kitchen": ambK, "living": ambL, "bedroom": ambR}
 	return &casa
 }
 
 func TestNewPlant(t *testing.T) {
-	config, err := os.Open("casa.gho")
+	config, err := os.Open("casa.plant")
 	if err != nil {
 		t.Errorf("cannot open json file")
 	}
 	defer config.Close()
-	plant := gohome.NewPlant(config)
+	plant := own.NewPlant(config)
 	if len(plant.Ambients) != 2 || strings.Compare(plant.Name, "home") != 0 || len(plant.Ambients["kitchen"].Lights) != 2 {
 		t.Errorf("Import plant configuratin has failed: %v", plant)
 	}
@@ -66,7 +68,7 @@ func TestAddressOfAmb(t *testing.T) {
 
 func TestExport(t *testing.T) {
 	casa := getTestPlant()
-	f, err := os.OpenFile("export.gho", os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile("export.plant", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		t.Errorf("Cannot open file: %v", err)
 	}

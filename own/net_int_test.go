@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/savardiego/gohome"
+	"github.com/savardiego/gohome/own"
 )
 
 func TestNewCable(t *testing.T) {
-	_, ok := gohome.NewCable("192.168.28.35:20000")
+	_, ok := own.NewCable("192.168.28.35:20000")
 	if !ok {
 		t.Logf("New Cable contruction failed.")
 		t.Fail()
@@ -16,24 +16,24 @@ func TestNewCable(t *testing.T) {
 }
 
 func TestNewHome(t *testing.T) {
-	c, ok := gohome.NewCable("192.168.28.35:20000")
+	c, ok := own.NewCable("192.168.28.35:20000")
 	if !ok {
 		t.Logf("New Cable contruction failed.")
 		t.Fail()
 	}
-	h := gohome.NewHome(c)
+	h := own.NewHome(c)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
 }
 func TestDoTurnOn(t *testing.T) {
-	c, ok := gohome.NewCable("192.168.28.35:20000")
+	c, ok := own.NewCable("192.168.28.35:20000")
 	if !ok {
 		t.Logf("New Cable contruction failed.")
 		t.Fail()
 	}
-	h := gohome.NewHome(c)
+	h := own.NewHome(c)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
@@ -46,12 +46,12 @@ func TestDoTurnOn(t *testing.T) {
 }
 
 func TestAsk(t *testing.T) {
-	c, ok := gohome.NewCable("192.168.28.35:20000")
+	c, ok := own.NewCable("192.168.28.35:20000")
 	if !ok {
 		t.Logf("New Cable contruction failed.")
 		t.Fail()
 	}
-	h := gohome.NewHome(c)
+	h := own.NewHome(c)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
@@ -66,12 +66,12 @@ func TestAsk(t *testing.T) {
 }
 
 func TestAskMany(t *testing.T) {
-	c, ok := gohome.NewCable("192.168.28.35:20000")
+	c, ok := own.NewCable("192.168.28.35:20000")
 	if !ok {
 		t.Logf("New Cable contruction failed.")
 		t.Fail()
 	}
-	h := gohome.NewHome(c)
+	h := own.NewHome(c)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()

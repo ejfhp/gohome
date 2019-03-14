@@ -16,13 +16,6 @@ var connErr = map[string]string{
 	"NAK":     "MESSAGE NOT ACEPTED",
 }
 
-type What string
-type Who string
-type Dimension string
-type Value string
-type Where string
-type Command string
-
 //ConnectionError wraps socket communicatin errors
 type ConnectionError struct {
 	code   string

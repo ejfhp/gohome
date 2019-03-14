@@ -1,2 +1,5 @@
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/savardiego/gohome v0.0.0-20190305181152-6bacc5cc4a0b/go.mod h1:VqW3vRIScLejkx2elljbrUKFNHHkgh86SNTYXYipC40=
+github.com/savardiego/gohome/own v0.0.0-20190306170804-4a4e3c8d4b17 h1:lpPmi0Ct3DD3t0u1Yy0cHjfWRT2oDTivGs7HS4LvVSs=
+github.com/savardiego/gohome/own v0.0.0-20190306170804-4a4e3c8d4b17/go.mod h1:a8YXweklt88q1YP1EDMAUYwGpv8aH3UcpJYRDiTEvDI=
