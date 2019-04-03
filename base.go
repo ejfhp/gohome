@@ -1,6 +1,9 @@
-package own
+package gohome
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Who string
 type What string
@@ -9,10 +12,10 @@ type Value string
 type Where string
 type Command string
 
-var lightning = Who("1")
+var Light = Who("1")
 
-var listWho = map[string]Who{
-	"lightning": lightning,
+var ListWho = map[string]Who{
+	"light": Light,
 }
 
 var listLightningWhat = map[string]What{
@@ -50,12 +53,13 @@ var listLightningWhat = map[string]What{
 	"JOLLY":            What("1000"),
 }
 
-var whoWhat = map[Who]map[string]What{
-	lightning: listLightningWhat,
+//WhoWhat maps all commands for every kind of application (light, automation..)
+var WhoWhat = map[Who]map[string]What{
+	Light: listLightningWhat,
 }
 
 func NewWho(who string) Who {
-	return listWho[who]
+	return ListWho[who]
 }
 
 func (w Who) Text() string {
@@ -63,7 +67,7 @@ func (w Who) Text() string {
 }
 
 func (w Who) NewWhat(what string) What {
-	return whoWhat[w][what]
+	return WhoWhat[w][strings.ToUpper(what)]
 }
 
 func (w What) Text() string {

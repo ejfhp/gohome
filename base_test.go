@@ -1,14 +1,14 @@
-package own_test
+package gohome_test
 
 import (
 	"testing"
 
-	"github.com/savardiego/gohome/own"
+	"github.com/savardiego/gohome"
 )
 
 func TestNewWho(t *testing.T) {
 	expected := "1"
-	who := own.NewWho("lightning")
+	who := gohome.NewWho("light")
 	if who.Text() != expected {
 		t.Errorf("Wrong WHO")
 	}
@@ -16,7 +16,7 @@ func TestNewWho(t *testing.T) {
 
 func TestNewWhat(t *testing.T) {
 	expected := "0"
-	who := own.NewWho("lightning")
+	who := gohome.NewWho("light")
 	what := who.NewWhat("TURN_OFF")
 	if what.Text() != expected {
 		t.Errorf("Wrong WHAT")
@@ -24,10 +24,15 @@ func TestNewWhat(t *testing.T) {
 }
 
 func TestNewCommand(t *testing.T) {
-	plant := getTestPlant()
-	turnOn := own.What("1")
-	command := own.NewCommand(own.Who("lightning"), turnOn, plant.AddressOfLight("kitchen", "table"))
-	expected := own.Command("*1*1*11##")
+	makeTestPlant(t)
+	who := gohome.NewWho("light")
+	what := who.NewWhat("turn_on")
+	where, err := gohome.NewWhere("kitchen.table")
+	if err != nil {
+		t.Errorf("Where not found: %v", err)
+	}
+	command := gohome.NewCommand(who, what, where)
+	expected := gohome.Command("*1*1*11##")
 	if command != expected {
 		t.Errorf("Wrong command %s, expected was %s", command, expected)
 	}
