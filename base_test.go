@@ -24,10 +24,10 @@ func TestNewWhat(t *testing.T) {
 }
 
 func TestNewCommand(t *testing.T) {
-	makeTestPlant(t)
+	plant := makeTestPlant(t)
 	who := gohome.NewWho("light")
 	what := who.NewWhat("turn_on")
-	where, err := gohome.NewWhere("kitchen.table")
+	where, err := plant.NewWhere("kitchen.table")
 	if err != nil {
 		t.Errorf("Where not found: %v", err)
 	}

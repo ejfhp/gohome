@@ -9,7 +9,7 @@ import (
 )
 
 func makeTestPlant(t *testing.T) *gohome.Plant {
-	buf := bytes.NewBufferString("{ \"name\": \"home\", \"address\": \"192.168.0.35:20000\", \"num\": 1, \"ambients\": { \"kitchen\": { \"num\": 1, \"Lights\": { \"table\": 1, \"main\": 2 } }, \"living\": { \"num\": 2, \"Lights\": { \"sofa\": 1, \"tv\": 2 } } } }")
+	buf := bytes.NewBufferString("{ \"name\": \"home\", \"address\": \"192.168.28.35:20000\", \"num\": 1, \"ambients\": { \"kitchen\": { \"num\": 1, \"Lights\": { \"table\": 1, \"main\": 2 } }, \"living\": { \"num\": 2, \"Lights\": { \"sofa\": 1, \"tv\": 2 } } } }")
 	p, err := gohome.LoadPlant(buf)
 	if err != nil {
 		t.Errorf("LoadPlant failed: %v", err)
@@ -23,9 +23,12 @@ func TestLoadPlant(t *testing.T) {
 		t.Errorf("cannot open json file")
 	}
 	defer config.Close()
-	gohome.LoadPlant(config)
-	if gohome.ServerAddress() != "192.168.0.35:20000" {
-		t.Errorf("Import plant configuratin has wrong address: '%s', len:%d", gohome.ServerAddress(), len(gohome.ServerAddress()))
+	plant, err := gohome.LoadPlant(config)
+	if err != nil {
+		t.Errorf("cannot load plant from config file")
+	}
+	if plant.ServerAddress() != "192.168.0.35:20000" {
+		t.Errorf("Import plant configuration has wrong address: '%s', len:%d", plant.ServerAddress(), len(plant.ServerAddress()))
 	}
 	exp := map[string]string{
 		"11": "kitchen.table",
@@ -36,7 +39,7 @@ func TestLoadPlant(t *testing.T) {
 		"2":  "living",
 	}
 	for k, v := range exp {
-		w, err := gohome.NewWhere(v)
+		w, err := plant.NewWhere(v)
 		if k != string(w) || err != nil {
 			t.Errorf("Wrong where %s instead of %s (err: %v)", w, k, err)
 		}
@@ -44,7 +47,7 @@ func TestLoadPlant(t *testing.T) {
 }
 
 func TestNewWhere(t *testing.T) {
-	makeTestPlant(t)
+	plant := makeTestPlant(t)
 	exp := map[string]string{
 		"11": "kitchen.table",
 		"12": "kitchen.main",
@@ -54,7 +57,7 @@ func TestNewWhere(t *testing.T) {
 		"2":  "living",
 	}
 	for k, v := range exp {
-		w, err := gohome.NewWhere(v)
+		w, err := plant.NewWhere(v)
 		if k != string(w) || err != nil {
 			t.Errorf("Wrong where %s instead of %s (err: %v)", w, k, err)
 		}
@@ -62,13 +65,13 @@ func TestNewWhere(t *testing.T) {
 }
 
 func TestExport(t *testing.T) {
-	makeTestPlant(t)
-	f, err := os.OpenFile("export.plant", os.O_RDWR|os.O_CREATE, 0755)
+	plant := makeTestPlant(t)
+	f, err := os.OpenFile("testdata/export.plant", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		t.Errorf("Cannot open file: %v", err)
 	}
 	defer f.Close()
-	err = gohome.ExportPlant(f)
+	err = plant.ExportPlant(f)
 	if err != nil {
 		t.Errorf("Plant export failed: %v", err)
 	}

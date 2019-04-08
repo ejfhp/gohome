@@ -1,44 +1,22 @@
 package gohome
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net"
+
+	"github.com/pkg/errors"
 )
 
-var connErr = map[string]string{
-	"RESFAIL": "FAILED TO RESOLVE ADDRESS",
-	"NOCONN":  "FAILED TO CONNECT",
-	"NOSEND":  "FAILED TO SEND TO SERVER",
-	"NOREAD":  "FAILED TO READ SERVER ANSWER",
-	"NOOPCMD": "FAILED TO SEND OPEN COMMAND SESSION",
-	"EMPTY":   "EMPTY MESSAGE",
-	"NAK":     "MESSAGE NOT ACEPTED",
-}
-
-//ConnectionError wraps socket communicatin errors
-type ConnectionError struct {
-	code   string
-	server string
-	cause  error
-}
-
-var ErrConnectionFailed = errors.New("Connection failed.")
-
-func (ce ConnectionError) Error() string {
-	return fmt.Sprintf("CONNECTION ERROR: %s, ADDRESS: %s, CAUSE: %v", connErr[ce.code], ce.server, ce.cause)
-}
+var ErrNoConnection = errors.New("NO CONNECTION")
+var ErrNoData = errors.New("NO DATA")
+var ErrServerNotFound = errors.New("SERVER NOT FOUND")
+var ErrConnectionFailed = errors.New("CONNECTION FAILED")
 
 //HomeError wraps OWN errors
 type HomeError struct {
 	code     string
 	incoming string
 	answer   string
-}
-
-func (he HomeError) Error() string {
-	return fmt.Sprintf("MY HOME ERROR: '%s', SENT MESSAGE: '%s', SERVER ANSWER: '%s'", connErr[he.code], he.incoming, he.answer)
 }
 
 // SystemMessages contains the OpenWebNet codes for various system messages
@@ -52,59 +30,83 @@ var SystemMessages = map[string]string{
 
 type Cable struct {
 	address string
-	conn    *net.TCPConn
+}
+
+//Home is a Btcino MyHome plant that can be controlled with a OpenWebNet enabled device (F452 ecc)
+type Home struct {
+	cable *Cable
+	plant *Plant
+}
+
+//NewHome creates a new Home connected through the given Cable
+func NewHome(plant *Plant) *Home {
+	log.Printf("NewHome")
+	address := plant.ServerAddress()
+	cable := NewCable(address)
+	return &Home{cable: cable, plant: plant}
+}
+
+//Do some action with your home
+func (h *Home) Do(command Command) bool {
+	log.Printf("Home.Do")
+	return h.cable.SendCommand(string(command))
+}
+
+//Ask the system
+func (h *Home) Ask(request Command) []string {
+	log.Printf("Home.Ask")
+	return h.cable.SendRequest(string(request))
 }
 
 //NewCable return a Cable connected to the OpenWebNet server at the given address
-func NewCable(address string) (*Cable, bool) {
-	log.Printf("NewCable; address: %s", address)
+func NewCable(address string) *Cable {
 	c := Cable{address: address}
-	ok := c.acked()
-	return &c, ok
+	return &c
 }
 
-func (c *Cable) connect() error {
+func (c *Cable) connect() (*net.TCPConn, error) {
+	log.Printf("Cable.connect address:%s", c.address)
 	tcpAddress, err := net.ResolveTCPAddr("tcp4", c.address)
 	if err != nil {
-		logError(ConnectionError{"RESFAIL", c.address, err})
-		return ErrConnectionFailed
+		return nil, errors.Wrapf(ErrConnectionFailed, "server address: %d", c.address)
 	}
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
-		logError(ConnectionError{"NOCONN", c.address, err})
-		return ErrConnectionFailed
+		return nil, errors.Wrapf(ErrNoConnection, "no dial to server address: %d", c.address)
 	}
-	if c.acked() {
-		c.conn = conn
+	if c.acked(conn) {
+		return nil, errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
+	}
+	return conn, nil
+}
+
+func (c *Cable) SendCommand(message string) error {
+	log.Printf("Cable.SendCommmand")
+	conn, err := c.connect()
+	if err != nil {
+		return errors.Wrap(err, "cannot connect")
+	}
+	defer conn.Close()
+	ans, err := c.send(conn, SystemMessages["OPEN_COMMAND_SESSION"])
+	if err != nil {
+		return errors.Wrap(err, "cannot open session")
+	}
+	if c.acked(conn) {
+		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
+	}
+	ans, err = c.send(conn, message)
+	if err != nil {
+		return errors.Wrapf(err, "cannot send message %s, ", message)
+	}
+	if c.acked(conn) {
+		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
 	}
 	return nil
 }
 
-func (c *Cable) disconnect() error {
-	if c.conn != nil {
-		err := c.conn.Close()
-		if err != nil {
-			return ErrConnectionFailed
-		}
-	}
-	return nil
-}
-
-func (c *Cable) sendCommand(message string) bool {
-	ok := c.send(SystemMessages["OPEN_COMMAND_SESSION"])
-	if !ok {
-		return false
-	}
-	ok = c.acked()
-	if !ok {
-		return false
-	}
-	ok = c.send(message)
-	ok = c.acked()
-	return ok
-}
-
-func (c *Cable) sendRequest(request string) []string {
+func (c *Cable) SendRequest(request string) []string {
+	c.connect()
+	defer c.disconnect()
 	answers := make([]string, 0, 10)
 	ok := c.send(SystemMessages["OPEN_COMMAND_SESSION"])
 	if !ok {
@@ -127,20 +129,19 @@ func (c *Cable) sendRequest(request string) []string {
 	return answers
 }
 
-func (c *Cable) send(message string) bool {
+func (c *Cable) send(conn *net.TCPConn, message string) (string, error) {
+	if c.conn == nil {
+		log.Printf("Connection is nil\n")
+		return "", false
+	}
 	log.Printf("cable.send() message:%s", message)
-	c.connect()
-	defer c.disconnect()
-	ok := true
 	_, err := c.conn.Write([]byte(message))
 	if err != nil {
-		logError(ConnectionError{"NOSEND", c.address, err})
-		ok = false
+		return "", ConnectionError{"NOSEND", c.address, err}
 	}
-	return ok
 }
 
-func (c *Cable) acked() bool {
+func (c *Cable) acked(conn *net.TCPConn) bool {
 	msg, ok := c.receive()
 	if !ok {
 		return false
@@ -149,20 +150,21 @@ func (c *Cable) acked() bool {
 }
 
 //returns answer, ok
-func (c *Cable) receive() (string, bool) {
+func (c *Cable) receive(conn *net.TCPConn) (string, error) {
+	if conn == nil {
+		return "", errors.Wrap(ErrNoConnection, "cannot receive from nil connection")
+	}
 	msg := make([]byte, 0, 20)
 	b := make([]byte, 1)
 	var end bool
 	ok := true
 	for !end {
-		n, err := c.conn.Read(b)
+		n, err := conn.Read(b)
 		if err != nil {
-			ok = false
-			logError(ConnectionError{"NOREAD", "", nil})
+			return "", ErrNoData
 		}
 		if n == 0 {
-			ok = false
-			logError(ConnectionError{"EMPTY", "", nil})
+			return "", ErrNoData
 		}
 		msg = append(msg, b[0])
 		if len(msg) > 1 && msg[len(msg)-1] == '#' && msg[len(msg)-2] == '#' {
@@ -182,28 +184,6 @@ func isAck(m string) bool {
 		a = false
 	}
 	return a
-}
-
-//Home is a Btcino MyHome plant that can be controlled with a OpenWebNet enabled device (F452 ecc)
-type Home struct {
-	cable *Cable
-	plant *Plant
-}
-
-//NewHome creates a new Home connected through the given Cable
-func NewHome(cable *Cable, plant *Plant) *Home {
-	return &Home{cable: cable, plant: plant}
-}
-
-//Do some action with your home
-func (h *Home) Do(command Command) bool {
-	return h.cable.sendCommand(string(command))
-}
-
-//Ask the system
-func (h *Home) Ask(request Command) []string {
-	log.Printf("Home.Ask")
-	return h.cable.sendRequest(string(request))
 }
 
 func logError(err error) {

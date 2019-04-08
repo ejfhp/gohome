@@ -7,28 +7,12 @@ import (
 	"github.com/savardiego/gohome"
 )
 
-func TestNewCable(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode.")
-	}
-	_, ok := gohome.NewCable("192.168.28.35:20000")
-	if !ok {
-		t.Logf("New Cable contruction failed.")
-		t.Fail()
-	}
-}
-
 func TestNewHome(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	c, ok := gohome.NewCable("192.168.28.35:20000")
-	if !ok {
-		t.Logf("New Cable contruction failed.")
-		t.Fail()
-	}
 	plant := makeTestPlant(t)
-	h := gohome.NewHome(c, plant)
+	h := gohome.NewHome(plant)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
@@ -38,13 +22,8 @@ func TestDoTurnOn(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	c, ok := gohome.NewCable("192.168.28.35:20000")
-	if !ok {
-		t.Logf("New Cable contruction failed.")
-		t.Fail()
-	}
 	plant := makeTestPlant(t)
-	h := gohome.NewHome(c, plant)
+	h := gohome.NewHome(plant)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
@@ -61,13 +40,8 @@ func TestAsk(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	c, ok := gohome.NewCable("192.168.28.35:20000")
-	if !ok {
-		t.Logf("New Cable contruction failed.")
-		t.Fail()
-	}
 	plant := makeTestPlant(t)
-	h := gohome.NewHome(c, plant)
+	h := gohome.NewHome(plant)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
@@ -85,13 +59,8 @@ func TestAskMany(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	c, ok := gohome.NewCable("192.168.28.35:20000")
-	if !ok {
-		t.Logf("New Cable contruction failed.")
-		t.Fail()
-	}
 	plant := makeTestPlant(t)
-	h := gohome.NewHome(c, plant)
+	h := gohome.NewHome(plant)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
