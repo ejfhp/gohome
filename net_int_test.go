@@ -26,13 +26,11 @@ func TestDoTurnOn(t *testing.T) {
 	h := gohome.NewHome(plant)
 	if h == nil {
 		t.Logf("New Home contruction failed.")
-		t.Fail()
 	}
 	//const cmd = "*1*18*71##"
-	const cmd = "*1*0*11##"
-	if !h.Do(cmd) {
-		t.Logf("Send message failed failed.")
-		t.Fail()
+	const cmd = "*1*0*31##"
+	if err := h.Do(cmd); err != nil {
+		t.Errorf("Send message failed failed: %v", err)
 	}
 }
 
@@ -47,10 +45,12 @@ func TestAsk(t *testing.T) {
 		t.Fail()
 	}
 	const query = "*#1*56##"
-	answer := h.Ask(query)
+	answer, err := h.Ask(query)
+	if err != nil {
+		t.Errorf("Ask failed: %v", err)
+	}
 	if len(answer) < 1 {
-		t.Logf("Query failed.")
-		t.Fail()
+		t.Errorf("Query failed.")
 	}
 	fmt.Println(answer)
 }
@@ -66,7 +66,10 @@ func TestAskMany(t *testing.T) {
 		t.Fail()
 	}
 	const query = "*#1*0##"
-	answer := h.Ask(query)
+	answer, err := h.Ask(query)
+	if err != nil {
+		t.Errorf("Ask failed: %v", err)
+	}
 	if len(answer) < 1 {
 		t.Logf("Query failed.")
 		t.Fail()

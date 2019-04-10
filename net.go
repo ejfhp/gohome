@@ -9,6 +9,7 @@ import (
 
 var ErrNoConnection = errors.New("NO CONNECTION")
 var ErrNoData = errors.New("NO DATA")
+var ErrNAK = errors.New("NAK")
 var ErrServerNotFound = errors.New("SERVER NOT FOUND")
 var ErrConnectionFailed = errors.New("CONNECTION FAILED")
 
@@ -47,13 +48,13 @@ func NewHome(plant *Plant) *Home {
 }
 
 //Do some action with your home
-func (h *Home) Do(command Command) bool {
+func (h *Home) Do(command Command) error {
 	log.Printf("Home.Do")
 	return h.cable.SendCommand(string(command))
 }
 
 //Ask the system
-func (h *Home) Ask(request Command) []string {
+func (h *Home) Ask(request Command) ([]string, error) {
 	log.Printf("Home.Ask")
 	return h.cable.SendRequest(string(request))
 }
@@ -68,14 +69,14 @@ func (c *Cable) connect() (*net.TCPConn, error) {
 	log.Printf("Cable.connect address:%s", c.address)
 	tcpAddress, err := net.ResolveTCPAddr("tcp4", c.address)
 	if err != nil {
-		return nil, errors.Wrapf(ErrConnectionFailed, "server address: %d", c.address)
+		return nil, errors.Wrapf(ErrConnectionFailed, "server address: %s", c.address)
 	}
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
-		return nil, errors.Wrapf(ErrNoConnection, "no dial to server address: %d", c.address)
+		return nil, errors.Wrapf(ErrNoConnection, "no dial to server address: %s", c.address)
 	}
-	if c.acked(conn) {
-		return nil, errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
+	if err = c.acked(conn); err != nil {
+		return nil, errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
 	}
 	return conn, nil
 }
@@ -87,64 +88,71 @@ func (c *Cable) SendCommand(message string) error {
 		return errors.Wrap(err, "cannot connect")
 	}
 	defer conn.Close()
-	ans, err := c.send(conn, SystemMessages["OPEN_COMMAND_SESSION"])
-	if err != nil {
+	log.Printf("Cable.open_command_session")
+	if c.send(conn, SystemMessages["OPEN_COMMAND_SESSION"]) != nil {
 		return errors.Wrap(err, "cannot open session")
 	}
-	if c.acked(conn) {
-		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
+	log.Printf("Cable.check ack")
+	if err = c.acked(conn); err != nil {
+		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
 	}
-	ans, err = c.send(conn, message)
-	if err != nil {
+	log.Printf("Sending nessage")
+	if c.send(conn, message) != nil {
 		return errors.Wrapf(err, "cannot send message %s, ", message)
 	}
-	if c.acked(conn) {
-		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %d", c.address)
+	log.Printf("Cable.check ack")
+	if err = c.acked(conn); err != nil {
+		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
 	}
 	return nil
 }
 
-func (c *Cable) SendRequest(request string) []string {
-	c.connect()
-	defer c.disconnect()
-	answers := make([]string, 0, 10)
-	ok := c.send(SystemMessages["OPEN_COMMAND_SESSION"])
-	if !ok {
-		return answers
-	}
-	ok = c.acked()
-	if !ok {
-		return answers
-	}
-	ok = c.send(request)
-	var end bool
-	for ok && !end {
-		var a string
-		a, ok = c.receive()
-		end = isAck(a)
-		if !end {
-			answers = append(answers, a)
-		}
-	}
-	return answers
-}
-
-func (c *Cable) send(conn *net.TCPConn, message string) (string, error) {
-	if c.conn == nil {
-		log.Printf("Connection is nil\n")
-		return "", false
-	}
-	log.Printf("cable.send() message:%s", message)
-	_, err := c.conn.Write([]byte(message))
+func (c *Cable) SendRequest(request string) ([]string, error) {
+	log.Printf("Cable.SendCommmand")
+	conn, err := c.connect()
 	if err != nil {
-		return "", ConnectionError{"NOSEND", c.address, err}
+		return nil, errors.Wrap(err, "cannot connect")
 	}
+	defer conn.Close()
+	if c.send(conn, SystemMessages["OPEN_COMMAND_SESSION"]) != nil {
+		return nil, errors.Wrapf(err, "cannot open session")
+	}
+	if err = c.acked(conn); err != nil {
+		return nil, errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
+	}
+	if c.send(conn, request) != nil {
+		return nil, errors.Wrapf(err, "cannot send request %s, ", request)
+	}
+	answers := make([]string, 0, 10)
+	for {
+		a, err := c.receive(conn)
+		if err != nil {
+			return answers, errors.Wrapf(err, "failed to receive answer for request: %s", request)
+		}
+		if a == SystemMessages["ACK"] {
+			break
+		}
+		answers = append(answers, a)
+	}
+	return answers, nil
 }
 
-func (c *Cable) acked(conn *net.TCPConn) bool {
-	msg, ok := c.receive()
-	if !ok {
-		return false
+func (c *Cable) send(conn *net.TCPConn, message string) error {
+	_, err := conn.Write([]byte(message))
+	if err != nil {
+		return errors.Wrap(ErrConnectionFailed, "failed to send")
+	}
+	if err = c.acked(conn); err != nil {
+		return errors.Wrap(err, "failed to send")
+
+	}
+	return nil
+}
+
+func (c *Cable) acked(conn *net.TCPConn) error {
+	msg, err := c.receive(conn)
+	if err != nil {
+		return errors.Wrap(err, "cannot check ACK")
 	}
 	return isAck(msg)
 }
@@ -172,20 +180,13 @@ func (c *Cable) receive(conn *net.TCPConn) (string, error) {
 		}
 	}
 	ans := string(msg)
-	log.Printf("cable.receive: msg:%s, ok:%t", ans, ok)
-	return ans, ok
+	log.Printf("Cable.receive: msg:%s, ok:%t", ans, ok)
+	return ans, nil
 }
 
-func isAck(m string) bool {
-	var a bool
-	if m == SystemMessages["ACK"] {
-		a = true
-	} else if m == SystemMessages["NACK"] {
-		a = false
+func isAck(m string) error {
+	if m != SystemMessages["ACK"] {
+		return ErrNAK
 	}
-	return a
-}
-
-func logError(err error) {
-	log.Printf("ERROR: %v", err)
+	return nil
 }
