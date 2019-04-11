@@ -82,7 +82,7 @@ func (c *Cable) connect() (*net.TCPConn, error) {
 }
 
 func (c *Cable) SendCommand(message string) error {
-	log.Printf("Cable.SendCommmand")
+	log.Printf("Cable.SendCommmand message:%s", message)
 	conn, err := c.connect()
 	if err != nil {
 		return errors.Wrap(err, "cannot connect")
@@ -108,7 +108,7 @@ func (c *Cable) SendCommand(message string) error {
 }
 
 func (c *Cable) SendRequest(request string) ([]string, error) {
-	log.Printf("Cable.SendCommmand")
+	log.Printf("Cable.SendRequest request:%s", request)
 	conn, err := c.connect()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect")
@@ -138,18 +138,16 @@ func (c *Cable) SendRequest(request string) ([]string, error) {
 }
 
 func (c *Cable) send(conn *net.TCPConn, message string) error {
+	log.Printf("Cable.send message:%s", message)
 	_, err := conn.Write([]byte(message))
 	if err != nil {
 		return errors.Wrap(ErrConnectionFailed, "failed to send")
-	}
-	if err = c.acked(conn); err != nil {
-		return errors.Wrap(err, "failed to send")
-
 	}
 	return nil
 }
 
 func (c *Cable) acked(conn *net.TCPConn) error {
+	log.Printf("Cable.acked")
 	msg, err := c.receive(conn)
 	if err != nil {
 		return errors.Wrap(err, "cannot check ACK")
@@ -159,6 +157,7 @@ func (c *Cable) acked(conn *net.TCPConn) error {
 
 //returns answer, ok
 func (c *Cable) receive(conn *net.TCPConn) (string, error) {
+	log.Printf("Cable.receive")
 	if conn == nil {
 		return "", errors.Wrap(ErrNoConnection, "cannot receive from nil connection")
 	}
@@ -185,6 +184,7 @@ func (c *Cable) receive(conn *net.TCPConn) (string, error) {
 }
 
 func isAck(m string) error {
+	log.Printf("isAck")
 	if m != SystemMessages["ACK"] {
 		return ErrNAK
 	}

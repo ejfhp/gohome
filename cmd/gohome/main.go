@@ -1,18 +1,15 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/savardiego/gohome"
 )
 
 const defaultConf = "gohome.json"
-
-var ErrWrongCommand = errors.New("Wrong command, cannot execute.")
-var ErrConfigNotFound = errors.New("Config file not found or not readable.")
 
 func main() {
 	//command line must be WHO WHAT WHERE
@@ -36,29 +33,30 @@ func main() {
 
 func executeCommand(command []string) error {
 	config, err := os.Open(defaultConf)
-	err = gohome.LoadPlant(config)
 	if err != nil {
-		log.Printf("cannot open configuration file: %s due to: %v", defaultConf, err)
-		return ErrConfigNotFound
+		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+	}
+	plant, err := gohome.LoadPlant(config)
+	if err != nil {
+		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
 	config.Close()
 	who := gohome.NewWho(command[0])
 	if who == "" {
-		log.Printf("Wrong <who>: %s", command[0])
-		return ErrWrongCommand
+		return errors.Errorf("unknown <who> in command:%s", command[0])
 	}
 	what := who.NewWhat(command[1])
 	if what == "" {
-		log.Printf("Wrong <what>: %s", command[0])
-		return ErrWrongCommand
+		errors.Errorf("unknown <what> in command: %s", command[1])
 	}
-	where, err := gohome.NewWhere(command[2])
+	where, err := plant.NewWhere(command[2])
 	if err != nil {
-		log.Printf("Wrong <where>: not found: %v", err)
-		return ErrWrongCommand
+		errors.Wrapf(err, "wrong <where> in command: %s", command[2])
 	}
 	log.Printf("executing command, who:%s what:%s where:%s\n", who, what, where)
-  command := gohome.NewCommand(who, what, where)
+	cmd := gohome.NewCommand(who, what, where)
+	home := gohome.NewHome(plant)
+	return home.Do(cmd)
 }
 
 func basicHelp() {
