@@ -2,6 +2,7 @@ package gohome_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 
@@ -60,6 +61,34 @@ func TestNewWhere(t *testing.T) {
 		w, err := plant.NewWhere(v)
 		if k != string(w) || err != nil {
 			t.Errorf("Wrong where %s instead of %s (err: %v)", w, k, err)
+		}
+	}
+}
+
+func TestDecode(t *testing.T) {
+	config, err := os.Open("testdata/casa.json")
+	if err != nil {
+		t.Errorf("cannot open json file")
+	}
+	defer config.Close()
+	plant, err := gohome.LoadPlant(config)
+	if err != nil {
+		t.Errorf("cannot load plant from config file")
+	}
+	exp := map[string]string{
+		"11": "kitchen.table",
+		"12": "kitchen.main",
+		"21": "living.sofa",
+		"22": "living.tv",
+		"1":  "kitchen",
+		"2":  "living",
+	}
+	for w, e := range exp {
+		wh := gohome.Where(w)
+		dec, err := plant.Decode(wh)
+		fmt.Printf("Where:%s decoded:%s\n", wh, dec)
+		if dec != e || err != nil {
+			t.Errorf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
 		}
 	}
 }

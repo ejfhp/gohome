@@ -59,6 +59,21 @@ func executeCommand(command []string) error {
 	return home.Do(cmd)
 }
 
+func listen() {
+	config, err := os.Open(defaultConf)
+	if err != nil {
+		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+	}
+	plant, err := gohome.LoadPlant(config)
+	if err != nil {
+		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
+	}
+	config.Close()
+	home := gohome.NewHome(plant)
+	return home.
+	gohome
+}
+
 func basicHelp() {
 	fmt.Printf("GoHome,\n")
 	fmt.Printf("a simple command line tool to control a Bticino MyHome plant.\n")

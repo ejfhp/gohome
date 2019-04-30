@@ -21,7 +21,7 @@ type HomeError struct {
 }
 
 // SystemMessages contains the OpenWebNet codes for various system messages
-var SystemMessages = map[string]string{
+var SystemMessages = map[string]Message{
 	"ACK":                   "*#*1##",
 	"NACK":                  "*#*0##",
 	"OPEN_COMMAND_SESSION":  "*99*0##", // OpenWebNet command to ask for a command session
@@ -48,15 +48,21 @@ func NewHome(plant *Plant) *Home {
 }
 
 //Do some action with your home
-func (h *Home) Do(command Command) error {
+func (h *Home) Do(command Message) error {
 	log.Printf("Home.Do")
-	return h.cable.SendCommand(string(command))
+	return h.cable.SendCommand(command)
 }
 
 //Ask the system
-func (h *Home) Ask(request Command) ([]string, error) {
+func (h *Home) Ask(request Message) ([]Message, error) {
 	log.Printf("Home.Ask")
-	return h.cable.SendRequest(string(request))
+	return h.cable.SendRequest(request)
+}
+
+func (h *Home) Listen() {
+	log.Printf("Home.Listen")
+	h.cable.Listen()
+
 }
 
 //NewCable return a Cable connected to the OpenWebNet server at the given address
@@ -81,7 +87,7 @@ func (c *Cable) connect() (*net.TCPConn, error) {
 	return conn, nil
 }
 
-func (c *Cable) SendCommand(message string) error {
+func (c *Cable) SendCommand(message Message) error {
 	log.Printf("Cable.SendCommmand message:%s", message)
 	conn, err := c.connect()
 	if err != nil {
@@ -107,27 +113,27 @@ func (c *Cable) SendCommand(message string) error {
 	return nil
 }
 
-func (c *Cable) SendRequest(request string) ([]string, error) {
-	log.Printf("Cable.SendRequest request:%s", request)
+func (c *Cable) SendRequest(message Message) ([]Message, error) {
+	log.Printf("Cable.SendRequest request:%s", message)
 	conn, err := c.connect()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect")
 	}
 	defer conn.Close()
 	if c.send(conn, SystemMessages["OPEN_COMMAND_SESSION"]) != nil {
-		return nil, errors.Wrapf(err, "cannot open session")
+		return nil, errors.Wrapf(err, "cannot open command session")
 	}
 	if err = c.acked(conn); err != nil {
 		return nil, errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
 	}
-	if c.send(conn, request) != nil {
-		return nil, errors.Wrapf(err, "cannot send request %s, ", request)
+	if c.send(conn, message) != nil {
+		return nil, errors.Wrapf(err, "cannot send request %s, ", message)
 	}
-	answers := make([]string, 0, 10)
+	answers := make([]Message, 0, 10)
 	for {
 		a, err := c.receive(conn)
 		if err != nil {
-			return answers, errors.Wrapf(err, "failed to receive answer for request: %s", request)
+			return answers, errors.Wrapf(err, "failed to receive answer for request: %s", message)
 		}
 		if a == SystemMessages["ACK"] {
 			break
@@ -137,7 +143,35 @@ func (c *Cable) SendRequest(request string) ([]string, error) {
 	return answers, nil
 }
 
-func (c *Cable) send(conn *net.TCPConn, message string) error {
+func (c *Cable) Listen() error {
+	log.Printf("Cable.Listen")
+	conn, err := c.connect()
+	if err != nil {
+		return errors.Wrap(err, "cannot connect")
+	}
+	defer conn.Close()
+	if c.send(conn, SystemMessages["OPEN_EVENT_SESSION"]) != nil {
+		return errors.Wrapf(err, "cannot open event session")
+	}
+	if err = c.acked(conn); err != nil {
+		return errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
+	}
+	answers := make([]Message, 0, 10)
+	for {
+		a, err := c.receive(conn)
+		if err != nil {
+			return errors.Wrapf(err, "failed to receive events")
+		}
+		if a == SystemMessages["ACK"] {
+			break
+		}
+		answers = append(answers, a)
+	}
+	return nil
+
+}
+
+func (c *Cable) send(conn *net.TCPConn, message Message) error {
 	log.Printf("Cable.send message:%s", message)
 	_, err := conn.Write([]byte(message))
 	if err != nil {
@@ -156,7 +190,7 @@ func (c *Cable) acked(conn *net.TCPConn) error {
 }
 
 //returns answer, ok
-func (c *Cable) receive(conn *net.TCPConn) (string, error) {
+func (c *Cable) receive(conn *net.TCPConn) (Message, error) {
 	log.Printf("Cable.receive")
 	if conn == nil {
 		return "", errors.Wrap(ErrNoConnection, "cannot receive from nil connection")
@@ -178,12 +212,12 @@ func (c *Cable) receive(conn *net.TCPConn) (string, error) {
 			end = true
 		}
 	}
-	ans := string(msg)
+	ans := Message(msg)
 	log.Printf("Cable.receive: msg:%s, ok:%t", ans, ok)
 	return ans, nil
 }
 
-func isAck(m string) error {
+func isAck(m Message) error {
 	log.Printf("isAck")
 	if m != SystemMessages["ACK"] {
 		return ErrNAK

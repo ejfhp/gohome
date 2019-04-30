@@ -2,10 +2,12 @@ package gohome
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 //GENERAL is the Where that refers to the entire plant
@@ -16,6 +18,9 @@ var ErrAmbientNotFound = errors.New("ambient not found")
 
 //ErrLightNotFound is returned when the desired loight is not found in the conf file
 var ErrLightNotFound = errors.New("light not found")
+
+//ErrWhereNotInPlant is returned whene a where numeric code is not found in the current plant configuration
+var ErrWhereNotInPlant = errors.New("WHERE not found in the current plant configuration")
 
 type Ambient struct {
 	Num    int            `json:"num"`
@@ -58,6 +63,35 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 		return where, nil
 	}
 	return noWhere, ErrLightNotFound
+}
+
+//Decode returns where defined by the ambient an light names in the plant config file: <ambient>[.<light>]
+func (p *Plant) Decode(where Where) (string, error) {
+	var wtext string
+	if len(where) < 1 || len(where) > 2 {
+		return "", ErrWhereNotInPlant
+	}
+	amb, err := strconv.Atoi(string(where[0:1]))
+	if err != nil {
+		return "", errors.Wrapf(ErrWhereNotInPlant, "where: %v", where)
+	}
+	for ka, a := range p.Ambients {
+		if a.Num == amb {
+			wtext = ka
+			if len(where) == 2 {
+				lig, err := strconv.Atoi(string(where[1:2]))
+				if err != nil {
+					return "", errors.Wrapf(ErrWhereNotInPlant, "where: %v", where)
+				}
+				for kl, pl := range a.Lights {
+					if pl == lig {
+						wtext = wtext + "." + kl
+					}
+				}
+			}
+		}
+	}
+	return wtext, nil
 }
 
 //ServerAddress returns the server address for the loaded configuration

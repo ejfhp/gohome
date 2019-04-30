@@ -2,6 +2,7 @@ package gohome
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -10,7 +11,7 @@ type What string
 type Dimension string
 type Value string
 type Where string
-type Command string
+type Message string
 
 var Light = Who("1")
 
@@ -75,7 +76,16 @@ func (w What) Text() string {
 }
 
 //NewCommand build a new Command to send to the home plant
-func NewCommand(who Who, what What, where Where) Command {
+func NewCommand(who Who, what What, where Where) Message {
 	cmd := fmt.Sprintf("*%s*%s*%s##", who, what, where)
-	return Command(cmd)
+	return Message(cmd)
+}
+
+func (m Message) Where() Where {
+	re := regexp.MustCompile(`(\*[1])(.*\*)([0-9]{1,2})(##)`)
+	w := re.FindStringSubmatch(string(m))
+	fmt.Printf("Match found: %v\n", w)
+	return Where(w[len(w)-2])
+
+	//riconoscere where tramite regexp
 }

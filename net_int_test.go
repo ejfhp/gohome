@@ -65,7 +65,8 @@ func TestAskMany(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	const query = "*#1*0##"
+	// const query = "*#1*0##"
+	const query = "*#5##"
 	answer, err := h.Ask(query)
 	if err != nil {
 		t.Errorf("Ask failed: %v", err)
@@ -76,3 +77,17 @@ func TestAskMany(t *testing.T) {
 	}
 	fmt.Println(answer)
 }
+
+func TestEventListen(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode.")
+	}
+	plant := makeTestPlant(t)
+	h := gohome.NewHome(plant)
+	if h == nil {
+		t.Logf("New Home contruction failed.")
+		t.Fail()
+	}
+	h.Listen()
+}
+
