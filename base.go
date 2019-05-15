@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Who string
@@ -13,10 +15,13 @@ type Value string
 type Where string
 type Message string
 
+var ErrWhatNotFound = errors.New("WHAT not found")
+var ErrWhoNotFound = errors.New("WHO not found")
+
 var Light = Who("1")
 
 var ListWho = map[string]Who{
-	"light": Light,
+	"LIGHT": Light,
 }
 
 var listLightningWhat = map[string]What{
@@ -58,9 +63,21 @@ var listLightningWhat = map[string]What{
 var WhoWhat = map[Who]map[string]What{
 	Light: listLightningWhat,
 }
+var regexpWhere = regexp.MustCompile(`(\*[1])(.*\*)([0-9]{1,2})(##)`)
+var regexpWho = regexp.MustCompile(`(^\*)([0-9]{1,2})(.*)`)
+var regexpWhat = regexp.MustCompile(`(^\*)([0-9]{1,2})(\*)([0-9]{1,2})(\*)([0-9]{1,2})(##)`)
 
 func NewWho(who string) Who {
 	return ListWho[who]
+}
+
+func DecodeWho(who Who) (string, error) {
+	for k, v := range ListWho {
+		if v == who {
+			return k, nil
+		}
+	}
+	return "", ErrWhoNotFound
 }
 
 func (w Who) Text() string {
@@ -69,6 +86,15 @@ func (w Who) Text() string {
 
 func (w Who) NewWhat(what string) What {
 	return WhoWhat[w][strings.ToUpper(what)]
+}
+
+func (w Who) DecodeWhat(what What) (string, error) {
+	for k, v := range WhoWhat[w] {
+		if v == what {
+			return k, nil
+		}
+	}
+	return "", ErrWhatNotFound
 }
 
 func (w What) Text() string {
@@ -82,10 +108,29 @@ func NewCommand(who Who, what What, where Where) Message {
 }
 
 func (m Message) Where() Where {
-	re := regexp.MustCompile(`(\*[1])(.*\*)([0-9]{1,2})(##)`)
-	w := re.FindStringSubmatch(string(m))
-	fmt.Printf("Match found: %v\n", w)
+	w := regexpWhere.FindStringSubmatch(string(m))
+	if len(w) < 2 {
+		return Where("")
+	}
 	return Where(w[len(w)-2])
+}
 
-	//riconoscere where tramite regexp
+func (m Message) Who() Who {
+	w := regexpWho.FindStringSubmatch(string(m))
+	if len(w) < 3 {
+		return Who("")
+	}
+	return Who(w[2])
+}
+
+func (m Message) What() What {
+	w := regexpWhat.FindStringSubmatch(string(m))
+	if len(w) < 7 {
+		return What("")
+	}
+	return What(w[4])
+}
+
+func (m Message) Decode() (Who, What, Where) {
+	return m.Who(), m.What(), m.Where()
 }

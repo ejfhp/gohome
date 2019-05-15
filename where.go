@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 
@@ -66,7 +67,7 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 }
 
 //Decode returns where defined by the ambient an light names in the plant config file: <ambient>[.<light>]
-func (p *Plant) Decode(where Where) (string, error) {
+func (p *Plant) DecodeWhere(where Where) (string, error) {
 	var wtext string
 	if len(where) < 1 || len(where) > 2 {
 		return "", ErrWhereNotInPlant
@@ -92,6 +93,25 @@ func (p *Plant) Decode(where Where) (string, error) {
 		}
 	}
 	return wtext, nil
+}
+
+func (p *Plant) Parse(msg Message) (string, string, string, error) {
+	o := msg.Who()
+	t := msg.What()
+	e := msg.Where()
+	ot, err := DecodeWho(o)
+	if err != nil {
+		log.Printf("cannot decode WHO of message %s due to: %v", msg, err)
+	}
+	tt, err := o.DecodeWhat(t)
+	if err != nil {
+		log.Printf("cannot decode WHAT of message %s due to: %v", msg, err)
+	}
+	et, err := p.DecodeWhere(e)
+	if err != nil {
+		log.Printf("cannot decode WHERE of message %s due to: %v", msg, err)
+	}
+	return ot, tt, et, nil
 }
 
 //ServerAddress returns the server address for the loaded configuration

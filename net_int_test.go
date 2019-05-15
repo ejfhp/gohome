@@ -3,6 +3,7 @@ package gohome_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/savardiego/gohome"
 )
@@ -78,7 +79,7 @@ func TestAskMany(t *testing.T) {
 	fmt.Println(answer)
 }
 
-func TestEventListen(t *testing.T) {
+func TestListen(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
@@ -88,6 +89,26 @@ func TestEventListen(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	h.Listen()
+	listen, stop, errs := h.Listen()
+	go func() {
+		dur := time.Duration(10 * time.Second)
+		fmt.Printf(">>>>> Waiting %f seconds.. \n", dur.Seconds())
+		time.Sleep(dur)
+		// var s struct{}
+		fmt.Printf(">>>>> Sending stop.. \n")
+		stop <- struct{}{}
+	}()
+	fmt.Printf(">>>>> Ready to listen.. \n")
+	ok := true
+	var e error
+	var m gohome.Message
+	for ok == true {
+		select {
+		case e, ok = <-errs:
+			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
+		case m, ok = <-listen:
+			who, what, where, err := plant.Parse(m)
+			fmt.Printf(">>>>> received (ok? %t): %s %s %s  -- err: %v\n", ok, who, what, where, err)
+		}
+	}
 }
-

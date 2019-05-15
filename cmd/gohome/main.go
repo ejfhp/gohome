@@ -59,7 +59,7 @@ func executeCommand(command []string) error {
 	return home.Do(cmd)
 }
 
-func listen() {
+func listen() error {
 	config, err := os.Open(defaultConf)
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
@@ -70,8 +70,8 @@ func listen() {
 	}
 	config.Close()
 	home := gohome.NewHome(plant)
-	return home.
-	gohome
+	home.Listen()
+	return nil
 }
 
 func basicHelp() {

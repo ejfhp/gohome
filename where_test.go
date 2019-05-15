@@ -65,7 +65,7 @@ func TestNewWhere(t *testing.T) {
 	}
 }
 
-func TestDecode(t *testing.T) {
+func TestDecodeWhere(t *testing.T) {
 	config, err := os.Open("testdata/casa.json")
 	if err != nil {
 		t.Errorf("cannot open json file")
@@ -82,13 +82,17 @@ func TestDecode(t *testing.T) {
 		"22": "living.tv",
 		"1":  "kitchen",
 		"2":  "living",
+		"":   "",
 	}
 	for w, e := range exp {
 		wh := gohome.Where(w)
-		dec, err := plant.Decode(wh)
+		dec, err := plant.DecodeWhere(wh)
 		fmt.Printf("Where:%s decoded:%s\n", wh, dec)
-		if dec != e || err != nil {
+		if dec != e {
 			t.Errorf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
+		}
+		if err != nil {
+			t.Logf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
 		}
 	}
 }
@@ -103,6 +107,32 @@ func TestExport(t *testing.T) {
 	err = plant.ExportPlant(f)
 	if err != nil {
 		t.Errorf("Plant export failed: %v", err)
+	}
+}
+
+func TestParse(t *testing.T) {
+	plant := makeTestPlant(t)
+	exp := map[string][]string{
+		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table"},
+		"*1*1*12##": []string{"LIGHT", "TURN_ON", "kitchen.main"},
+		"*1*1*21##": []string{"LIGHT", "TURN_ON", "living.sofa"},
+		"*1*1*22##": []string{"LIGHT", "TURN_ON", "living.tv"},
+		"*1*1*1##":  []string{"LIGHT", "TURN_ON", "kitchen"},
+		"*1*1*2##":  []string{"LIGHT", "TURN_ON", "living"},
+		"*3*2##":    []string{"", "", ""},
+		"*1**2##":   []string{"LIGHT", "", "living"},
+		"*1*1*##":   []string{"LIGHT", "", ""},
+		"":          []string{"", "", ""},
+	}
+	for m, ts := range exp {
+		ot, tt, et, err := plant.Parse(gohome.Message(m))
+		if err != nil {
+			t.Errorf("failed to decode message '%s' due to: %v", m, err)
+		}
+		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] {
+			t.Errorf("decoded values fom message '%s' are wrong: %s!=%s  %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2])
+
+		}
 	}
 
 }
