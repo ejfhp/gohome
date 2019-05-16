@@ -66,6 +66,7 @@ var WhoWhat = map[Who]map[string]What{
 var regexpWhere = regexp.MustCompile(`(\*[1])(.*\*)([0-9]{1,2})(##)`)
 var regexpWho = regexp.MustCompile(`(^\*)([0-9]{1,2})(.*)`)
 var regexpWhat = regexp.MustCompile(`(^\*)([0-9]{1,2})(\*)([0-9]{1,2})(\*)([0-9]{1,2})(##)`)
+var regexpValid = regexp.MustCompile(`^\*[0-9,\*,\#]*##`)
 
 func NewWho(who string) Who {
 	return ListWho[who]
@@ -133,4 +134,11 @@ func (m Message) What() What {
 
 func (m Message) Decode() (Who, What, Where) {
 	return m.Who(), m.What(), m.Where()
+}
+
+func (m Message) IsValid() bool {
+	if len(m) < 5 {
+		return false
+	}
+	return regexpValid.MatchString(string(m))
 }

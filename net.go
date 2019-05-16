@@ -179,13 +179,14 @@ func (c *Cable) listen(out chan<- Message, in <-chan struct{}, errs chan<- error
 			break
 		default:
 			fmt.Printf("Receiving.. \n")
-			a, err := c.receive(conn, true)
+			m, err := c.receive(conn, true)
 			fmt.Printf("Done receiving.\n")
 			if err != nil {
 				errs <- errors.Wrapf(err, "failed to receive events")
 			}
-			msg := Message(a)
-			out <- msg
+			if m.IsValid() {
+				out <- m
+			}
 		}
 	}
 }
@@ -216,13 +217,12 @@ func (c *Cable) receive(conn *net.TCPConn, noTimeout bool) (Message, error) {
 	}
 	msg := make([]byte, 0, 20)
 	b := make([]byte, 1)
-	var end bool
-	ok := true
-	for !end {
+	for {
 		conn.SetReadDeadline(time.Now().Add(time.Second * 1))
 		n, err := conn.Read(b)
 		if err, ok := err.(net.Error); ok && err.Timeout() && noTimeout {
-			continue
+			log.Printf("...timeout")
+			break
 		}
 		if err != nil {
 			return "", errors.Wrap(err, "cannot read from connection")
@@ -233,11 +233,10 @@ func (c *Cable) receive(conn *net.TCPConn, noTimeout bool) (Message, error) {
 		msg = append(msg, b[0])
 		//TODO sostituire con regexp
 		if len(msg) > 1 && msg[len(msg)-1] == '#' && msg[len(msg)-2] == '#' {
-			end = true
+			break
 		}
 	}
 	ans := Message(msg)
-	log.Printf("Cable.receive: msg:%s, ok:%t", ans, ok)
 	return ans, nil
 }
 

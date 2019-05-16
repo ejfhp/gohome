@@ -140,3 +140,33 @@ func TestDecodeWhatFromMessage(t *testing.T) {
 		}
 	}
 }
+func TestMessageValid(t *testing.T) {
+	messages := map[string]bool{
+		"*1*1*23##":  true,
+		"*1*0*13##":  true,
+		"*1*11*1##":  true,
+		"*1*18*21##": true,
+		"*#*1##":     true,
+		"*99*1##":    true,
+		"*99*9##":    true,
+		"21##":       false,
+		"*##":        false,
+		"*#":         false,
+		"*":          false,
+		"#":          false,
+		"*1*6*d##":   false,
+		"":           false,
+	}
+	for m, e := range messages {
+		msg := gohome.Message(m)
+		exp := e
+		if msg.IsValid() != exp {
+			if exp {
+				t.Errorf("Valid message has been recognized invalid: %s", msg)
+			} else {
+				t.Errorf("Invalid message has been recognized valid: %s", msg)
+			}
+		}
+	}
+
+}
