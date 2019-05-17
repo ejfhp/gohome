@@ -163,20 +163,20 @@ func (c *Cable) listen(out chan<- Message, in <-chan struct{}, errs chan<- error
 	if c.send(conn, SystemMessages["OPEN_EVENT_SESSION"]) != nil {
 		errs <- errors.Wrapf(err, "cannot open event session")
 		close(out)
-		close(errs)
 		return
 	}
 	if err = c.acked(conn); err != nil {
 		errs <- errors.Wrapf(ErrConnectionFailed, "NAK from server address: %s", c.address)
 		close(out)
-		close(errs)
 		return
 	}
+Listen:
 	for {
 		select {
 		case <-in:
 			fmt.Printf("Closing.. \n")
-			break
+			close(out)
+			break Listen
 		default:
 			fmt.Printf("Receiving.. \n")
 			m, err := c.receive(conn, true)

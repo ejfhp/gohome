@@ -102,13 +102,17 @@ func TestListen(t *testing.T) {
 	ok := true
 	var e error
 	var m gohome.Message
-	for ok == true {
+	for ok {
 		select {
 		case e, ok = <-errs:
 			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
 		case m, ok = <-listen:
-			who, what, where, err := plant.Parse(m)
-			fmt.Printf(">>>>> received (ok? %t): %s %s %s  -- err: %v\n", ok, who, what, where, err)
+			if m.IsValid() {
+				who, what, where, err := plant.Parse(m)
+				fmt.Printf(">>>>> received (ok? %t): %s %s %s  -- err: %v\n", ok, who, what, where, err)
+			} else {
+				fmt.Printf(">>>>> message invalid: '%s'\n", m)
+			}
 		}
 	}
 }
