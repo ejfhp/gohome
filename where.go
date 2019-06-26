@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Where string
+
 //GENERAL is the Where that refers to the entire plant
 const GENERAL Where = "0"
 
@@ -48,7 +50,7 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 		if !ok {
 			return noWhere, ErrAmbientNotFound
 		}
-		lig := amb.Lights[split[1]]
+		lig, ok := amb.Lights[split[1]]
 		if !ok {
 			return noWhere, ErrLightNotFound
 		}
@@ -68,6 +70,9 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 
 //Decode returns where defined by the ambient an light names in the plant config file: <ambient>[.<light>]
 func (p *Plant) DecodeWhere(where Where) (string, error) {
+	if where == "" {
+		return "", nil
+	}
 	var wtext string
 	if len(where) < 1 || len(where) > 2 {
 		return "", ErrWhereNotInPlant
@@ -95,23 +100,37 @@ func (p *Plant) DecodeWhere(where Where) (string, error) {
 	return wtext, nil
 }
 
-func (p *Plant) Parse(msg Message) (string, string, string, error) {
-	o := msg.Who()
-	t := msg.What()
-	e := msg.Where()
-	ot, err := DecodeWho(o)
+//Parse return the who, what, where of a message as three different params, and if is a request
+func (p *Plant) Explain(msg Message) (string, string, string, bool) {
+	ot, err := DecodeWho(msg.Who)
 	if err != nil {
-		log.Printf("cannot decode WHO of message %s due to: %v", msg, err)
+		log.Printf("Plant.Parse - cannot decode WHO of message '%v' due to: %v", msg, err)
+		return ot, "", "", false
 	}
-	tt, err := o.DecodeWhat(t)
+	tt, err := msg.Who.DecodeWhat(msg.What)
 	if err != nil {
-		log.Printf("cannot decode WHAT of message %s due to: %v", msg, err)
+		log.Printf("Plant.Parse - cannot decode WHAT of message '%v' due to: %v", msg, err)
+		return ot, tt, "", false
 	}
-	et, err := p.DecodeWhere(e)
+	et, err := p.DecodeWhere(msg.Where)
 	if err != nil {
-		log.Printf("cannot decode WHERE of message %s due to: %v", msg, err)
+		log.Printf("Plant.Parse - cannot decode WHERE of message '%v' due to: %v", msg, err)
+		return ot, tt, et, false
 	}
-	return ot, tt, et, nil
+	return ot, tt, et, msg.IsReq
+}
+
+//FormatToJSON returns the who, what, where of a message in a JSON formatted string
+func (p *Plant) FormatToJSON(msg Message) string {
+	j, err := json.Marshal(msg)
+	if err != nil {
+		return "{ERROR: }"
+	}
+	return string(j)
+}
+
+func (p *Plant) ParseFromJSON(json string) Message {
+	return Message{}
 }
 
 //ServerAddress returns the server address for the loaded configuration

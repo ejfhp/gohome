@@ -8,6 +8,13 @@ import (
 	"github.com/savardiego/gohome"
 )
 
+/*
+TO AVOID THESE TESTS WHILE NOT PRESENT A MYHOME SERVER ON THE NETWORK RUN:
+
+go test -short
+
+*/
+
 func TestNewHome(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
@@ -29,7 +36,7 @@ func TestDoTurnOn(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 	}
 	//const cmd = "*1*18*71##"
-	const cmd = "*1*0*31##"
+	cmd := gohome.ParseFrame("*1*0*31##")
 	if err := h.Do(cmd); err != nil {
 		t.Errorf("Send message failed failed: %v", err)
 	}
@@ -45,7 +52,7 @@ func TestAsk(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	const query = "*#1*56##"
+	query := gohome.ParseFrame("*#1*56##")
 	answer, err := h.Ask(query)
 	if err != nil {
 		t.Errorf("Ask failed: %v", err)
@@ -67,7 +74,7 @@ func TestAskMany(t *testing.T) {
 		t.Fail()
 	}
 	// const query = "*#1*0##"
-	const query = "*#5##"
+	query := gohome.SystemMessages["QUERY_ALL"]
 	answer, err := h.Ask(query)
 	if err != nil {
 		t.Errorf("Ask failed: %v", err)
@@ -101,17 +108,17 @@ func TestListen(t *testing.T) {
 	fmt.Printf(">>>>> Ready to listen.. \n")
 	ok := true
 	var e error
-	var m gohome.Message
+	var f string
 	for ok {
 		select {
 		case e, ok = <-errs:
 			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
-		case m, ok = <-listen:
-			if m.IsValid() {
-				who, what, where, err := plant.Parse(m)
-				fmt.Printf(">>>>> received (ok? %t): %s %s %s  -- err: %v\n", ok, who, what, where, err)
+		case f, ok = <-listen:
+			if v, _ := gohome.IsValid(f); v {
+				msg := gohome.ParseFrame(f)
+				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who, msg.What, msg.Where, msg.IsReq)
 			} else {
-				fmt.Printf(">>>>> message invalid: '%s'\n", m)
+				fmt.Printf(">>>>> message invalid: '%s'\n", f)
 			}
 		}
 	}

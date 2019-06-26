@@ -2,15 +2,15 @@ package gohome_test
 
 import (
 	"bytes"
-	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/savardiego/gohome"
 )
 
 func makeTestPlant(t *testing.T) *gohome.Plant {
-	buf := bytes.NewBufferString("{ \"name\": \"home\", \"address\": \"192.168.28.35:20000\", \"num\": 1, \"ambients\": { \"kitchen\": { \"num\": 1, \"Lights\": { \"table\": 1, \"main\": 2 } }, \"living\": { \"num\": 2, \"Lights\": { \"sofa\": 1, \"tv\": 2 } } } }")
+	buf := bytes.NewBufferString("{ \"name\": \"home\", \"address\": \"192.168.28.35:20000\", \"num\": 1, \"ambients\": { \"kitchen\": { \"num\": 1, \"Lights\": { \"table\": 1, \"main\": 2 } }, \"living\": { \"num\": 2, \"Lights\": { \"sofa\": 1, \"tv\": 2 } }, \"camera\": { \"num\": 5, \"Lights\": { \"bed\": 8, \"main\": 6 } } } }")
 	p, err := gohome.LoadPlant(buf)
 	if err != nil {
 		t.Errorf("LoadPlant failed: %v", err)
@@ -60,7 +60,23 @@ func TestNewWhere(t *testing.T) {
 	for k, v := range exp {
 		w, err := plant.NewWhere(v)
 		if k != string(w) || err != nil {
-			t.Errorf("Wrong where %s instead of %s (err: %v)", w, k, err)
+			t.Errorf("Wrong where '%s' instead of '%s' (err: %v)", w, k, err)
+		}
+	}
+}
+func TestNewWrongWhere(t *testing.T) {
+	plant := makeTestPlant(t)
+	exp := []string{
+		"",
+		"livingsofa",
+		"living.",
+		"living.wrong",
+		"kitchen.sofa.wrong",
+	}
+	for i, v := range exp {
+		w, err := plant.NewWhere(v)
+		if w != "" || err == nil {
+			t.Errorf("Wrong where for '%d': '%s' (err: %v)", i, w, err)
 		}
 	}
 }
@@ -87,7 +103,6 @@ func TestDecodeWhere(t *testing.T) {
 	for w, e := range exp {
 		wh := gohome.Where(w)
 		dec, err := plant.DecodeWhere(wh)
-		fmt.Printf("Where:%s decoded:%s\n", wh, dec)
 		if dec != e {
 			t.Errorf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
 		}
@@ -110,29 +125,47 @@ func TestExport(t *testing.T) {
 	}
 }
 
-func TestParse(t *testing.T) {
+func TestParseParams(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string][]string{
-		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table"},
-		"*1*1*12##": []string{"LIGHT", "TURN_ON", "kitchen.main"},
-		"*1*1*21##": []string{"LIGHT", "TURN_ON", "living.sofa"},
-		"*1*1*22##": []string{"LIGHT", "TURN_ON", "living.tv"},
-		"*1*1*1##":  []string{"LIGHT", "TURN_ON", "kitchen"},
-		"*1*1*2##":  []string{"LIGHT", "TURN_ON", "living"},
-		"*3*2##":    []string{"", "", ""},
-		"*1**2##":   []string{"LIGHT", "", "living"},
-		"*1*1*##":   []string{"LIGHT", "", ""},
-		"":          []string{"", "", ""},
+		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table", "false"},
+		"*1*1*12##": []string{"LIGHT", "TURN_ON", "kitchen.main", "false"},
+		"*1*1*21##": []string{"LIGHT", "TURN_ON", "living.sofa", "false"},
+		"*1*1*22##": []string{"LIGHT", "TURN_ON", "living.tv", "false"},
+		"*1*1*1##":  []string{"LIGHT", "TURN_ON", "kitchen", "false"},
+		"*1*1*2##":  []string{"LIGHT", "TURN_ON", "living", "false"},
+		"*3*2##":    []string{"", "", "", "false"},
+		"*1**2##":   []string{"LIGHT", "", "", "false"},
+		"*1*1*##":   []string{"LIGHT", "", "", "false"},
+		"*#1*1##":   []string{"LIGHT", "", "kitchen", "true"},
+		"":          []string{"", "", "", "false"},
 	}
 	for m, ts := range exp {
-		ot, tt, et, err := plant.Parse(gohome.Message(m))
-		if err != nil {
-			t.Errorf("failed to decode message '%s' due to: %v", m, err)
-		}
-		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] {
-			t.Errorf("decoded values fom message '%s' are wrong: %s!=%s  %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2])
-
+		ot, tt, et, isReq := plant.Explain(gohome.ParseFrame(m))
+		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] || strconv.FormatBool(isReq) != ts[3] {
+			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2], strconv.FormatBool(isReq), ts[3])
 		}
 	}
+}
 
+func TestFormatToJSON(t *testing.T) {
+	plant := makeTestPlant(t)
+	exp := map[string]string{
+		"*1*1*11##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen.table\", \"ISREQ\": \"false\"}",
+		"*1*1*12##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen.main\", \"ISREQ\": \"false\"}",
+		"*1*1*21##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living.sofa\", \"ISREQ\": \"false\"}",
+		"*1*1*22##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living.tv\", \"ISREQ\": \"false\"}",
+		"*1*1*1##":  "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen\", \"ISREQ\": \"false\"}",
+		"*1*1*2##":  "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living\", \"ISREQ\": \"false\"}",
+		"*3*2##":    "{\"WHO\": \"\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
+		"*1**2##":   "{\"WHO\": \"LIGHT\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
+		"*1*1##":    "{\"WHO\": \"LIGHT\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
+		"":          "{\"WHO\": \"\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
+	}
+	for m, ts := range exp {
+		json := plant.FormatToJSON(gohome.ParseFrame(m))
+		if json != ts {
+			t.Errorf("decoded JSON for message '%s' is wrong: %s!=%s", m, json, ts)
+		}
+	}
 }

@@ -12,8 +12,20 @@ type Who string
 type What string
 type Dimension string
 type Value string
-type Where string
-type Message string
+type Message struct {
+	Who     Who   `json:"who"`
+	What    What  `json:"what"`
+	Where   Where `json:"where"`
+	IsReq   bool  `json:"isreq"`
+	special string
+}
+
+const COMMAND = 0
+const REQUEST = 1
+const SPECIAL = 2
+const DIMENSIONGET = 3
+const DIMENSIONSET = 4
+const INVALID = -1
 
 var ErrWhatNotFound = errors.New("WHAT not found")
 var ErrWhoNotFound = errors.New("WHO not found")
@@ -63,16 +75,21 @@ var listLightningWhat = map[string]What{
 var WhoWhat = map[Who]map[string]What{
 	Light: listLightningWhat,
 }
-var regexpWhere = regexp.MustCompile(`(\*[1])(.*\*)([0-9]{1,2})(##)`)
-var regexpWho = regexp.MustCompile(`(^\*)([0-9]{1,2})(.*)`)
-var regexpWhat = regexp.MustCompile(`(^\*)([0-9]{1,2})(\*)([0-9]{1,2})(\*)([0-9]{1,2})(##)`)
-var regexpValid = regexp.MustCompile(`^\*[0-9,\*,\#]*##`)
+var regexpCommand = regexp.MustCompile(`^\*([0-9]{1,2})\*([0-9]{1,2})\*([0-9]{1,2})##`)
+var regexpRequest = regexp.MustCompile(`^\*#([0-9]{1,2})\*([0-9]{1,2})##`)
+var regexpDimensionGet = regexp.MustCompile(`^\*#([0-9]{1,2})\*([0-9]{1,2})\*([0-9]{1,2})##`)
+var regexpDimensionSet = regexp.MustCompile(`^\*#([0-9]{1,2})\*([0-9]{1,2})\*#([0-9]{1,2})(\*[0-9]{1,2})+##`)
+
+// var regexpRequest = regexp.MustCompile(`(^\*#[0-9])`)
 
 func NewWho(who string) Who {
-	return ListWho[who]
+	return ListWho[strings.ToUpper(who)]
 }
 
 func DecodeWho(who Who) (string, error) {
+	if who == "" {
+		return "", nil
+	}
 	for k, v := range ListWho {
 		if v == who {
 			return k, nil
@@ -81,15 +98,14 @@ func DecodeWho(who Who) (string, error) {
 	return "", ErrWhoNotFound
 }
 
-func (w Who) Text() string {
-	return string(w)
-}
-
 func (w Who) NewWhat(what string) What {
 	return WhoWhat[w][strings.ToUpper(what)]
 }
 
 func (w Who) DecodeWhat(what What) (string, error) {
+	if what == "" {
+		return "", nil
+	}
 	for k, v := range WhoWhat[w] {
 		if v == what {
 			return k, nil
@@ -98,47 +114,92 @@ func (w Who) DecodeWhat(what What) (string, error) {
 	return "", ErrWhatNotFound
 }
 
-func (w What) Text() string {
-	return string(w)
+func (m Message) Frame() string {
+	if m.IsSpecial() {
+		return m.special
+	}
+	if m.IsReq {
+		frame := fmt.Sprintf("*#%s*%s##", m.Who, m.Where)
+		return frame
+	}
+	frame := fmt.Sprintf("*%s*%s*%s##", m.Who, m.What, m.Where)
+	return frame
+}
+
+func (m Message) IsSpecial() bool {
+	if m.special != "" {
+		return true
+	}
+	return false
 }
 
 //NewCommand build a new Command to send to the home plant
 func NewCommand(who Who, what What, where Where) Message {
-	cmd := fmt.Sprintf("*%s*%s*%s##", who, what, where)
-	return Message(cmd)
+	return Message{Who: who, What: what, Where: where, IsReq: false}
 }
 
-func (m Message) Where() Where {
-	w := regexpWhere.FindStringSubmatch(string(m))
-	if len(w) < 2 {
-		return Where("")
+func ParseFrame(frame string) Message {
+	message := Message{}
+	valid, msgkind := IsValid(frame)
+	if !valid {
+		fmt.Printf("Frame not valid: %s\n", frame)
+		return Message{}
 	}
-	return Where(w[len(w)-2])
-}
-
-func (m Message) Who() Who {
-	w := regexpWho.FindStringSubmatch(string(m))
-	if len(w) < 3 {
-		return Who("")
+	if msgkind == REQUEST {
+		t := regexpRequest.FindStringSubmatch(string(frame))
+		fmt.Printf("Parse reques (%s): %v\n", frame, t)
+		message.Who = Who(t[1])
+		message.Where = Where(t[2])
+		return message
 	}
-	return Who(w[2])
-}
-
-func (m Message) What() What {
-	w := regexpWhat.FindStringSubmatch(string(m))
-	if len(w) < 7 {
-		return What("")
+	if msgkind == COMMAND {
+		t := regexpCommand.FindStringSubmatch(string(frame))
+		fmt.Printf("Parse command (%s): %v\n", frame, t)
+		message.Who = Who(t[1])
+		message.What = What(t[2])
+		message.Where = Where(t[3])
+		return message
 	}
-	return What(w[4])
-}
-
-func (m Message) Decode() (Who, What, Where) {
-	return m.Who(), m.What(), m.Where()
-}
-
-func (m Message) IsValid() bool {
-	if len(m) < 5 {
-		return false
+	if msgkind == DIMENSIONGET {
+		t := regexpDimensionGet.FindStringSubmatch(string(frame))
+		fmt.Printf("Parse dimget (%s): %v\n", frame, t)
+		message.Who = Who(t[1])
+		message.Where = Where(t[2])
+		return message
 	}
-	return regexpValid.MatchString(string(m))
+	if msgkind == DIMENSIONSET {
+		t := regexpDimensionSet.FindStringSubmatch(string(frame))
+		fmt.Printf("Parse dimset (%s): %v\n", frame, t)
+		message.Who = Who(t[1])
+		message.Where = Where(t[2])
+		return message
+	}
+	return message
+}
+
+//NewRequest build a new Request to send to the home plant
+func NewRequest(who Who, what What, where Where) Message {
+	return Message{Who: who, What: what, Where: where, IsReq: true}
+}
+
+func IsValid(msg string) (bool, int) {
+	if len(msg) < 5 {
+		return false, -1
+	}
+	for _, m := range SystemMessages {
+		if msg == m.Frame() {
+			return true, SPECIAL
+		}
+	}
+	switch {
+	case regexpCommand.MatchString(msg):
+		return true, COMMAND
+	case regexpRequest.MatchString(msg):
+		return true, REQUEST
+	case regexpDimensionGet.MatchString(msg):
+		return true, DIMENSIONGET
+	case regexpDimensionSet.MatchString(msg):
+		return true, DIMENSIONSET
+	}
+	return false, -1
 }

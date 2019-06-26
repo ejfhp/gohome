@@ -1,1 +1,1 @@
-{"name":"home","num":1,"address":"192.168.28.35:20000","ambients":{"kitchen":{"num":1,"lights":{"main":2,"table":1}},"living":{"num":2,"lights":{"sofa":1,"tv":2}}}}
+{"name":"home","num":1,"address":"192.168.28.35:20000","ambients":{"camera":{"num":5,"lights":{"bed":8,"main":6}},"kitchen":{"num":1,"lights":{"main":2,"table":1}},"living":{"num":2,"lights":{"sofa":1,"tv":2}}}}

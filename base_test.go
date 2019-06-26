@@ -9,7 +9,7 @@ import (
 func TestNewWho(t *testing.T) {
 	expected := "1"
 	who := gohome.NewWho("light")
-	if who.Text() != expected {
+	if string(who) != expected {
 		t.Errorf("Wrong WHO")
 	}
 }
@@ -18,7 +18,7 @@ func TestNewWhat(t *testing.T) {
 	expected := "0"
 	who := gohome.NewWho("light")
 	what := who.NewWhat("TURN_OFF")
-	if what.Text() != expected {
+	if string(what) != expected {
 		t.Errorf("Wrong WHAT")
 	}
 }
@@ -32,69 +32,80 @@ func TestNewCommand(t *testing.T) {
 		t.Errorf("Where not found: %v", err)
 	}
 	command := gohome.NewCommand(who, what, where)
-	expected := gohome.Message("*1*1*11##")
+	expected := gohome.Message{Who: gohome.Who("1"), What: gohome.What("1"), Where: gohome.Where("11"), IsReq: false}
+
 	if command != expected {
-		t.Errorf("Wrong command %s, expected was %s", command, expected)
+		t.Errorf("Wrong command %v, expected was %v", command, expected)
 	}
 }
 
-func TestWhereFromMessage(t *testing.T) {
+func TestWhereFromFrame(t *testing.T) {
 	messages := [][]string{
-		{"*1*1*23##", "23"},
-		{"*1*0*13##", "13"},
-		{"*1*0*1##", "1"},
-		{"*1*21##", "21"},
-		{"*1*2##", "2"},
+		{"*5*1*23##", "23"},
+		{"*#5*1*#43*8##", "1"},
+		{"*5*0*13##", "13"},
+		{"*5*0*1##", "1"},
+		{"*#5*21##", "21"},
+		{"*#5*21*2##", "21"},
+		{"*#5*1##", "1"},
+		{"*5*2##", ""},
+		{"*5**2##", ""},
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.Message(m[0])
+		msg := gohome.ParseFrame(m[0])
 		expWhere := gohome.Where(m[1])
-		wher := msg.Where()
-		if wher != expWhere {
-			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:%s", i, expWhere, wher)
+		if msg.Where != expWhere {
+			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:'%s'", i, expWhere, msg.Where)
 		}
 	}
 }
 
-func TestWhoFromMessage(t *testing.T) {
+func TestWhoFromFrame(t *testing.T) {
 	messages := [][]string{
 		{"*5*1*23##", "5"},
+		{"*#5*1*#43*8##", "5"},
 		{"*5*0*13##", "5"},
 		{"*5*0*1##", "5"},
-		{"*5*21##", "5"},
-		{"*55*2##", "55"},
+		{"*#5*21##", "5"},
+		{"*#5*21*2##", "5"},
+		{"*#5*1##", "5"},
+		{"*5*2##", ""},
+		{"*5**2##", ""},
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.Message(m[0])
+		msg := gohome.ParseFrame(m[0])
 		expWho := gohome.Who(m[1])
-		who := msg.Who()
-		if who != expWho {
-			t.Errorf("%d - Wrong WHO decoded: exp:%s actual:%s", i, expWho, who)
+		if msg.Who != expWho {
+			t.Errorf("%d - Wrong WHO decoded: exp:%s actual:%s", i, expWho, msg.Who)
 		}
 	}
 }
 
-func TestWhatFromMessage(t *testing.T) {
+func TestWhatFromFrame(t *testing.T) {
 	messages := [][]string{
 		{"*5*1*23##", "1"},
+		{"*#5*1*#43*8##", ""},
 		{"*5*0*13##", "0"},
+		{"*5*10*13##", "10"},
 		{"*5*0*1##", "0"},
-		{"*5*21##", ""},
-		{"*55*2##", ""},
+		{"*#5*21##", ""},
+		{"*#5*21*2##", ""},
+		{"*#5*1##", ""},
+		{"*5*2##", ""},
+		{"*5**2##", ""},
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.Message(m[0])
+		msg := gohome.ParseFrame(m[0])
 		expWhat := gohome.What(m[1])
-		what := msg.What()
-		if what != expWhat {
-			t.Errorf("%d - Wrong WHAT decoded: exp:%s actual:%s", i, expWhat, what)
+		if msg.What != expWhat {
+			t.Errorf("%d - Wrong WHAT decoded: exp:%s actual:%s", i, expWhat, msg.What)
 		}
 	}
 }
-func TestDecodeWhoFromMessage(t *testing.T) {
+func TestDecodeWhoFromFrame(t *testing.T) {
 	messages := [][]string{
 		{"*1*1*23##", "LIGHT"},
 		{"*1*0*13##", "LIGHT"},
@@ -104,10 +115,9 @@ func TestDecodeWhoFromMessage(t *testing.T) {
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.Message(m[0])
+		msg := gohome.ParseFrame(m[0])
 		expWho := m[1]
-		who := msg.Who()
-		decoded, err := gohome.DecodeWho(who)
+		decoded, err := gohome.DecodeWho(msg.Who)
 		if decoded != expWho {
 			t.Errorf("%d - Wrong WHO decoded: exp:%s actual:%s", i, expWho, decoded)
 		}
@@ -117,7 +127,7 @@ func TestDecodeWhoFromMessage(t *testing.T) {
 	}
 }
 
-func TestDecodeWhatFromMessage(t *testing.T) {
+func TestDecodeWhatFromFrame(t *testing.T) {
 	messages := [][]string{
 		{"*1*1*23##", "TURN_ON"},
 		{"*1*0*13##", "TURN_OFF"},
@@ -127,11 +137,9 @@ func TestDecodeWhatFromMessage(t *testing.T) {
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.Message(m[0])
+		msg := gohome.ParseFrame(m[0])
 		expWhat := m[1]
-		who := msg.Who()
-		what := msg.What()
-		decoded, err := who.DecodeWhat(what)
+		decoded, err := msg.Who.DecodeWhat(msg.What)
 		if decoded != expWhat {
 			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:%s", i, expWhat, decoded)
 		}
@@ -140,33 +148,49 @@ func TestDecodeWhatFromMessage(t *testing.T) {
 		}
 	}
 }
-func TestMessageValid(t *testing.T) {
-	messages := map[string]bool{
-		"*1*1*23##":  true,
-		"*1*0*13##":  true,
-		"*1*11*1##":  true,
-		"*1*18*21##": true,
-		"*#*1##":     true,
-		"*99*1##":    true,
-		"*99*9##":    true,
-		"21##":       false,
-		"*##":        false,
-		"*#":         false,
-		"*":          false,
-		"#":          false,
-		"*1*6*d##":   false,
-		"":           false,
+
+func TestMessageIsValid(t *testing.T) {
+	messages := map[string][]int{
+		"*1*1*23##":      []int{1, 0},
+		"*1*0*13##":      []int{1, 0},
+		"*1*11*1##":      []int{1, 0},
+		"*1*18*21##":     []int{1, 0},
+		"*#1*2##":        []int{1, 1},
+		"*#1*18*10##":    []int{1, 3},
+		"*#1*18*#10*5##": []int{1, 4},
+		"*#*1##":         []int{1, 2},
+		"*99*1##":        []int{1, 2},
+		"*99*9##":        []int{1, 2},
+		"21##":           []int{0, -1},
+		"*##":            []int{0, -1},
+		"*#":             []int{0, -1},
+		"*":              []int{0, -1},
+		"#":              []int{0, -1},
+		"*1*6*d##":       []int{0, -1},
+		"":               []int{0, -1},
 	}
 	for m, e := range messages {
-		msg := gohome.Message(m)
-		exp := e
-		if msg.IsValid() != exp {
-			if exp {
-				t.Errorf("Valid message has been recognized invalid: %s", msg)
-			} else {
-				t.Errorf("Invalid message has been recognized valid: %s", msg)
-			}
+		if v, k := gohome.IsValid(m); v != (e[0] != 0) || k != e[1] {
+			t.Errorf("Wrong validity or vrong kind: %s, got valid:%t kind:%d", m, v, k)
 		}
 	}
+}
 
+func TestMessageIsRequest(t *testing.T) {
+	messages := map[string]int{
+		"*1*1*23##":         gohome.COMMAND,
+		"*1*0*13##":         gohome.COMMAND,
+		"*1*11*1##":         gohome.COMMAND,
+		"*#1*18*21##":       gohome.DIMENSIONGET,
+		"*#1*18*#21*4*78##": gohome.DIMENSIONSET,
+		"*#*1##":            gohome.SPECIAL,
+		"*99*1##":           gohome.SPECIAL,
+		"*1*9##":            gohome.INVALID,
+	}
+	for m, e := range messages {
+		exp := e
+		if _, k := gohome.IsValid(m); k != exp {
+			t.Errorf("Request failed to be recognized: %s", m)
+		}
+	}
 }
