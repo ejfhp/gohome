@@ -52,7 +52,7 @@ func NewHome(plant *Plant) *Home {
 //Do some action with your home
 func (h *Home) Do(command Message) error {
 	log.Printf("Home.Do")
-	if command.IsReq {
+	if command.Kind != COMMAND {
 		return errors.Errorf("Message is not a command: %v", command)
 	}
 	return h.cable.sendCommand(command)
@@ -61,7 +61,7 @@ func (h *Home) Do(command Message) error {
 //Ask the system
 func (h *Home) Ask(request Message) ([]Message, error) {
 	log.Printf("Home.Ask")
-	if !request.IsReq {
+	if request.Kind != REQUEST {
 		return nil, errors.Errorf("Message is not a request: %v", request)
 	}
 	frames, err := h.cable.sendRequest(request)

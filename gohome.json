@@ -1,0 +1,95 @@
+{
+  "name": "Casa Robbiate",
+  "num": 1,
+  "address": "192.168.28.35:20000",
+  "ambients": {
+    "cucina": {
+      "num": 1,
+      "lights": {
+        "principale": 3,
+        "cappa": 6,
+        "fornelli": 2,
+        "tavolo": 4
+      }
+    },
+    "esterno": {
+      "num": 2,
+      "lights": {
+        "backgarden": 1,
+        "ingresso": 3
+      }
+    },
+    "tetto": {
+      "num": 6,
+      "lights": {
+        "backgarden": 4,
+        "ingresso": 3
+      }
+    },
+    "studio": {
+      "num": 6,
+      "lights": {
+        "principale": 1
+      }
+    },
+    "scale": {
+      "num": 9,
+      "lights": {
+        "terra": 1,
+        "primo": 2,
+        "secondo": 3
+      }
+    },
+    "sala": {
+      "num": 4,
+      "lights": {
+        "principale": 3
+      }
+    },
+    "bagno": {
+      "num": 3,
+      "lights": {
+        "terra": 1,
+        "specchio terra": 2,
+        "primo": 5,
+        "specchio primo": 4
+      }
+    },
+    "sottoscala": {
+      "num": 3,
+      "lights": {
+        "principale": 3
+      }
+    },
+    "camera": {
+      "num": 5,
+      "lights": {
+        "principale": 6,
+        "cabina armadio": 7,
+        "eli": 9,
+        "diego": 8
+      }
+    },
+    "cameretta": {
+      "num": 8,
+      "lights": {
+        "principale": 1
+      }
+    },
+    "ospiti": {
+      "num": 8,
+      "lights": {
+        "principale": 2
+      }
+    },
+    "box": {
+      "num": 7,
+      "lights": {
+        "serranda nord": 1,
+        "luce": 2,
+        "serranda sud": 3
+      }
+    }
+  }
+}
+

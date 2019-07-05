@@ -116,7 +116,7 @@ func TestListen(t *testing.T) {
 		case f, ok = <-listen:
 			if v, _ := gohome.IsValid(f); v {
 				msg := gohome.ParseFrame(f)
-				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who, msg.What, msg.Where, msg.IsReq)
+				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who, msg.What, msg.Where, msg.Kind)
 			} else {
 				fmt.Printf(">>>>> message invalid: '%s'\n", f)
 			}

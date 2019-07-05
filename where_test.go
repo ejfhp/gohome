@@ -3,7 +3,6 @@ package gohome_test
 import (
 	"bytes"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/savardiego/gohome"
@@ -128,22 +127,22 @@ func TestExport(t *testing.T) {
 func TestParseParams(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string][]string{
-		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table", "false"},
-		"*1*1*12##": []string{"LIGHT", "TURN_ON", "kitchen.main", "false"},
-		"*1*1*21##": []string{"LIGHT", "TURN_ON", "living.sofa", "false"},
-		"*1*1*22##": []string{"LIGHT", "TURN_ON", "living.tv", "false"},
-		"*1*1*1##":  []string{"LIGHT", "TURN_ON", "kitchen", "false"},
-		"*1*1*2##":  []string{"LIGHT", "TURN_ON", "living", "false"},
-		"*3*2##":    []string{"", "", "", "false"},
-		"*1**2##":   []string{"LIGHT", "", "", "false"},
-		"*1*1*##":   []string{"LIGHT", "", "", "false"},
-		"*#1*1##":   []string{"LIGHT", "", "kitchen", "true"},
-		"":          []string{"", "", "", "false"},
+		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table", "COMMAND"},
+		"*1*1*12##": []string{"LIGHT", "TURN_ON", "kitchen.main", "COMMAND"},
+		"*1*1*21##": []string{"LIGHT", "TURN_ON", "living.sofa", "COMMAND"},
+		"*1*1*22##": []string{"LIGHT", "TURN_ON", "living.tv", "COMMAND"},
+		"*1*1*1##":  []string{"LIGHT", "TURN_ON", "kitchen", "COMMAND"},
+		"*1*1*2##":  []string{"LIGHT", "TURN_ON", "living", "COMMAND"},
+		"*3*2##":    []string{"", "", "", "INVALID"},
+		"*1**2##":   []string{"", "", "", "INVALID"},
+		"*1*1*##":   []string{"", "", "", "INVALID"},
+		"*#1*1##":   []string{"LIGHT", "", "kitchen", "REQUEST"},
+		"":          []string{"", "", "", "INVALID"},
 	}
 	for m, ts := range exp {
-		ot, tt, et, isReq := plant.Explain(gohome.ParseFrame(m))
-		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] || strconv.FormatBool(isReq) != ts[3] {
-			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2], strconv.FormatBool(isReq), ts[3])
+		ot, tt, et, k := plant.Explain(gohome.ParseFrame(m))
+		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] || k != ts[3] {
+			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2], k, ts[3])
 		}
 	}
 }
@@ -151,16 +150,16 @@ func TestParseParams(t *testing.T) {
 func TestFormatToJSON(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string]string{
-		"*1*1*11##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen.table\", \"ISREQ\": \"false\"}",
-		"*1*1*12##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen.main\", \"ISREQ\": \"false\"}",
-		"*1*1*21##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living.sofa\", \"ISREQ\": \"false\"}",
-		"*1*1*22##": "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living.tv\", \"ISREQ\": \"false\"}",
-		"*1*1*1##":  "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"kitchen\", \"ISREQ\": \"false\"}",
-		"*1*1*2##":  "{\"WHO\": \"LIGHT\", \"WHAT\": \"TURN_ON\", \"WHERE\": \"living\", \"ISREQ\": \"false\"}",
-		"*3*2##":    "{\"WHO\": \"\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
-		"*1**2##":   "{\"WHO\": \"LIGHT\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
-		"*1*1##":    "{\"WHO\": \"LIGHT\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
-		"":          "{\"WHO\": \"\", \"WHAT\": \"\", \"WHERE\": \"\", \"ISREQ\": \"false\"}",
+		"*1*1*11##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"kitchen.table\", \"kind\": \"0\"}",
+		"*1*1*12##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"kitchen.main\", \"kind\": \"0\"}",
+		"*#1*1*##":  "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"living\", \"kind\": \"1\"}",
+		"*1*1*22##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"living.tv\", \"kind\": \"0\"}",
+		"*#1*12##":  "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"kitchen.main\", \"kind\": \"1\"}",
+		"*1*1*2##":  "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"living\", \"kind\": \"0\"}",
+		"*3*2##":    "{\"who\": \"\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
+		"*1*2##":    "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
+		"*1*1##":    "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
+		"":          "{\"who\": \"\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
 	}
 	for m, ts := range exp {
 		json := plant.FormatToJSON(gohome.ParseFrame(m))

@@ -11,10 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Where string
+type Where struct {
+	Code string
+	Text string
+}
 
 //GENERAL is the Where that refers to the entire plant
-const GENERAL Where = "0"
+var GENERAL Where = Where{"0", "GENERAL"}
 
 //ErrAmbientNotFound is returned when the desired where is not found in the conf file
 var ErrAmbientNotFound = errors.New("ambient not found")
@@ -38,13 +41,13 @@ type Plant struct {
 }
 
 //NewWhere returns a
-func (p *Plant) NewWhere(where string) (Where, error) {
+func (p *Plant) WhereFromText(text string) (Where, error) {
 	var noWhere Where
-	if where == "general" {
-		where := Where("0")
+	if strings.ToUpper(text) == "GENERAL" {
+		where := GENERAL
 		return where, nil
 	}
-	split := strings.Split(where, ".")
+	split := strings.Split(text, ".")
 	if len(split) == 2 {
 		amb, ok := p.Ambients[split[0]]
 		if !ok {
@@ -54,7 +57,7 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 		if !ok {
 			return noWhere, ErrLightNotFound
 		}
-		where := Where(fmt.Sprintf("%d%d", amb.Num, lig))
+		where := Where{fmt.Sprintf("%d%d", amb.Num, lig), text}
 		return where, nil
 	}
 	if len(split) == 1 {
@@ -62,32 +65,32 @@ func (p *Plant) NewWhere(where string) (Where, error) {
 		if !ok {
 			return noWhere, ErrAmbientNotFound
 		}
-		where := Where(fmt.Sprintf("%d", amb.Num))
+		where := Where{fmt.Sprintf("%d", amb.Num), text}
 		return where, nil
 	}
 	return noWhere, ErrLightNotFound
 }
 
 //Decode returns where defined by the ambient an light names in the plant config file: <ambient>[.<light>]
-func (p *Plant) DecodeWhere(where Where) (string, error) {
-	if where == "" {
-		return "", nil
+func (p *Plant) WhereFromCode(code string) (Where, error) {
+	if code == "" {
+		return Where{}, nil
 	}
 	var wtext string
-	if len(where) < 1 || len(where) > 2 {
-		return "", ErrWhereNotInPlant
+	if len(code) < 1 || len(code) > 2 {
+		return Where{}, ErrWhereNotInPlant
 	}
-	amb, err := strconv.Atoi(string(where[0:1]))
+	amb, err := strconv.Atoi(string(code[0:1]))
 	if err != nil {
-		return "", errors.Wrapf(ErrWhereNotInPlant, "where: %v", where)
+		return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
 	}
 	for ka, a := range p.Ambients {
 		if a.Num == amb {
 			wtext = ka
-			if len(where) == 2 {
-				lig, err := strconv.Atoi(string(where[1:2]))
+			if len(code) == 2 {
+				lig, err := strconv.Atoi(string(code[1:2]))
 				if err != nil {
-					return "", errors.Wrapf(ErrWhereNotInPlant, "where: %v", where)
+					return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
 				}
 				for kl, pl := range a.Lights {
 					if pl == lig {
@@ -97,33 +100,38 @@ func (p *Plant) DecodeWhere(where Where) (string, error) {
 			}
 		}
 	}
-	return wtext, nil
+	return Where{code, wtext}, nil
 }
 
 //Parse return the who, what, where of a message as three different params, and if is a request
-func (p *Plant) Explain(msg Message) (string, string, string, bool) {
-	ot, err := DecodeWho(msg.Who)
+func (p *Plant) Explain(msg Message) (string, string, string, string) {
+	var decwho, decwhat, decwhere string
+	var err error
+	decwho, err = DecodeWho(msg.Who)
 	if err != nil {
 		log.Printf("Plant.Parse - cannot decode WHO of message '%v' due to: %v", msg, err)
-		return ot, "", "", false
+		return decwho, decwhat, decwhere, "INVALID"
 	}
-	tt, err := msg.Who.DecodeWhat(msg.What)
-	if err != nil {
-		log.Printf("Plant.Parse - cannot decode WHAT of message '%v' due to: %v", msg, err)
-		return ot, tt, "", false
-	}
-	et, err := p.DecodeWhere(msg.Where)
+	decwhere, err = p.DecodeWhere(msg.Where)
 	if err != nil {
 		log.Printf("Plant.Parse - cannot decode WHERE of message '%v' due to: %v", msg, err)
-		return ot, tt, et, false
+		return decwho, decwhat, decwhere, "INVALID"
 	}
-	return ot, tt, et, msg.IsReq
+	if msg.Kind == COMMAND {
+		decwhat, err = msg.Who.DecodeWhat(msg.What)
+		if err != nil {
+			log.Printf("Plant.Parse - cannot decode WHAT of message '%v' due to: %v", msg, err)
+			return decwho, decwhat, decwhere, "INVALID"
+		}
+	}
+	return decwho, decwhat, decwhere, ExplainKind(msg.Kind)
 }
 
 //FormatToJSON returns the who, what, where of a message in a JSON formatted string
 func (p *Plant) FormatToJSON(msg Message) string {
 	j, err := json.Marshal(msg)
 	if err != nil {
+		log.Printf("Plant.FormatToJSON - cannot format message '%v' due to: %v", msg, err)
 		return "{ERROR: }"
 	}
 	return string(j)

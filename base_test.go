@@ -32,7 +32,7 @@ func TestNewCommand(t *testing.T) {
 		t.Errorf("Where not found: %v", err)
 	}
 	command := gohome.NewCommand(who, what, where)
-	expected := gohome.Message{Who: gohome.Who("1"), What: gohome.What("1"), Where: gohome.Where("11"), IsReq: false}
+	expected := gohome.Message{Who: gohome.Who("1"), What: gohome.What("1"), Where: gohome.Where("11"), Kind: gohome.COMMAND}
 
 	if command != expected {
 		t.Errorf("Wrong command %v, expected was %v", command, expected)
