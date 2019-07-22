@@ -7,39 +7,46 @@ import (
 )
 
 func TestNewWho(t *testing.T) {
-	expected := "1"
-	who := gohome.NewWho("light")
-	if string(who) != expected {
+	expected := "LIGHT"
+	who := gohome.NewWho("1")
+	if who.Desc != expected {
 		t.Errorf("Wrong WHO")
 	}
 }
 
 func TestNewWhat(t *testing.T) {
 	expected := "0"
-	who := gohome.NewWho("light")
-	what := who.NewWhat("TURN_OFF")
-	if string(what) != expected {
+	who := gohome.NewWho("1")
+	what, err := who.WhatFromDesc("TURN_OFF")
+	if err != nil {
+		t.Errorf("What not found: %v", err)
+	}
+	if what.Code != expected {
 		t.Errorf("Wrong WHAT")
 	}
 }
 
 func TestNewCommand(t *testing.T) {
 	plant := makeTestPlant(t)
-	who := gohome.NewWho("light")
-	what := who.NewWhat("turn_on")
-	where, err := plant.NewWhere("kitchen.table")
+	who := gohome.NewWho("1")
+	what, err := who.WhatFromDesc("turn_on")
+	if err != nil {
+		t.Errorf("What not found: %v", err)
+	}
+	where, err := plant.WhereFromDesc("kitchen.table")
 	if err != nil {
 		t.Errorf("Where not found: %v", err)
 	}
-	command := gohome.NewCommand(who, what, where)
-	expected := gohome.Message{Who: gohome.Who("1"), What: gohome.What("1"), Where: gohome.Where("11"), Kind: gohome.COMMAND}
+	frame := gohome.NewCommand(who, what, where).Frame()
+	expectedFrame := "*1*1*11##"
 
-	if command != expected {
-		t.Errorf("Wrong command %v, expected was %v", command, expected)
+	if frame != expectedFrame {
+		t.Errorf("Wrong command %v, expected was %v", frame, expectedFrame)
 	}
 }
 
 func TestWhereFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
 	messages := [][]string{
 		{"*5*1*23##", "23"},
 		{"*#5*1*#43*8##", "1"},
@@ -53,10 +60,10 @@ func TestWhereFromFrame(t *testing.T) {
 		{"", ""},
 	}
 	for i, m := range messages {
-		msg := gohome.ParseFrame(m[0])
-		expWhere := gohome.Where(m[1])
-		if msg.Where != expWhere {
-			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:'%s'", i, expWhere, msg.Where)
+		msg := plant.ParseFrame(m[0])
+		expWhereCode := m[1]
+		if msg.Where.Code != expWhereCode {
+			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:'%s'", i, expWhereCode, msg.Where.Code)
 		}
 	}
 }

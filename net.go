@@ -71,7 +71,7 @@ func (h *Home) Ask(request Message) ([]Message, error) {
 	//TODO parse di tutte le frame
 	res := make([]Message, len(frames))
 	for i, f := range frames {
-		res[i] = ParseFrame(f)
+		res[i] = h.plant.ParseFrame(f)
 	}
 	return res, nil
 }
