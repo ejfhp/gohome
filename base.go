@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-const COMMAND = 0
-const REQUEST = 1
-const SPECIAL = 2
-const DIMENSIONGET = 3
-const DIMENSIONSET = 4
-const INVALID = -1
+const COMMAND = "COMMAND"
+const REQUEST = "REQUEST"
+const SPECIAL = "SPECIAL"
+const DIMENSIONGET = "DIMENSIONGET"
+const DIMENSIONSET = "DIMENSIONSET"
+const INVALID = "INVALID"
 
 var ErrWhatNotFound = errors.New("WHAT not found")
 var ErrWhoNotFound = errors.New("WHO not found")
@@ -35,7 +35,7 @@ type Message struct {
 	Who     *Who
 	What    What
 	Where   Where
-	Kind    int
+	Kind    string
 	special string
 }
 
@@ -86,9 +86,9 @@ func NewRequest(who *Who, what What, where Where) Message {
 	return Message{Who: who, What: what, Where: where, Kind: REQUEST}
 }
 
-func IsValid(msg string) (bool, int) {
+func IsValid(msg string) (bool, string) {
 	if len(msg) < 5 {
-		return false, -1
+		return false, INVALID
 	}
 	for _, m := range SystemMessages {
 		if msg == m.Frame() {
@@ -105,21 +105,5 @@ func IsValid(msg string) (bool, int) {
 	case regexpDimensionSet.MatchString(msg):
 		return true, DIMENSIONSET
 	}
-	return false, -1
-}
-
-func ExplainKind(kind int) string {
-	switch kind {
-	case COMMAND:
-		return "COMMAND"
-	case REQUEST:
-		return "REQUEST"
-	case DIMENSIONGET:
-		return "DIMENSIONGET"
-	case DIMENSIONSET:
-		return "DIMENSIONSET"
-	case INVALID:
-		return "INVALID"
-	}
-	return ""
+	return false, INVALID
 }

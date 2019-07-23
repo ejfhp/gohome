@@ -36,7 +36,7 @@ func TestDoTurnOn(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 	}
 	//const cmd = "*1*18*71##"
-	cmd := gohome.ParseFrame("*1*0*31##")
+	cmd := plant.ParseFrame("*1*0*31##")
 	if err := h.Do(cmd); err != nil {
 		t.Errorf("Send message failed failed: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestAsk(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	query := gohome.ParseFrame("*#1*56##")
+	query := plant.ParseFrame("*#1*56##")
 	answer, err := h.Ask(query)
 	if err != nil {
 		t.Errorf("Ask failed: %v", err)
@@ -115,7 +115,7 @@ func TestListen(t *testing.T) {
 			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
 		case f, ok = <-listen:
 			if v, _ := gohome.IsValid(f); v {
-				msg := gohome.ParseFrame(f)
+				msg := plant.ParseFrame(f)
 				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who, msg.What, msg.Where, msg.Kind)
 			} else {
 				fmt.Printf(">>>>> message invalid: '%s'\n", f)

@@ -10,7 +10,7 @@ import (
 
 func makeTestPlant(t *testing.T) *gohome.Plant {
 	buf := bytes.NewBufferString("{ \"name\": \"home\", \"address\": \"192.168.28.35:20000\", \"num\": 1, \"ambients\": { \"kitchen\": { \"num\": 1, \"Lights\": { \"table\": 1, \"main\": 2 } }, \"living\": { \"num\": 2, \"Lights\": { \"sofa\": 1, \"tv\": 2 } }, \"camera\": { \"num\": 5, \"Lights\": { \"bed\": 8, \"main\": 6 } } } }")
-	p, err := gohome.LoadPlant(buf)
+	p, err := gohome.NewPlant(buf)
 	if err != nil {
 		t.Errorf("LoadPlant failed: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestLoadPlant(t *testing.T) {
 		t.Errorf("cannot open json file")
 	}
 	defer config.Close()
-	plant, err := gohome.LoadPlant(config)
+	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		t.Errorf("cannot load plant from config file")
 	}
@@ -39,8 +39,8 @@ func TestLoadPlant(t *testing.T) {
 		"2":  "living",
 	}
 	for k, v := range exp {
-		w, err := plant.NewWhere(v)
-		if k != string(w) || err != nil {
+		w, err := plant.WhereFromDesc(v)
+		if k != w.Code || err != nil {
 			t.Errorf("Wrong where %s instead of %s (err: %v)", w, k, err)
 		}
 	}
@@ -57,8 +57,8 @@ func TestNewWhere(t *testing.T) {
 		"2":  "living",
 	}
 	for k, v := range exp {
-		w, err := plant.NewWhere(v)
-		if k != string(w) || err != nil {
+		w, err := plant.WhereFromDesc(v)
+		if k != w.Code || err != nil {
 			t.Errorf("Wrong where '%s' instead of '%s' (err: %v)", w, k, err)
 		}
 	}
@@ -73,8 +73,8 @@ func TestNewWrongWhere(t *testing.T) {
 		"kitchen.sofa.wrong",
 	}
 	for i, v := range exp {
-		w, err := plant.NewWhere(v)
-		if w != "" || err == nil {
+		w, err := plant.WhereFromDesc(v)
+		if w.Desc != "" || err == nil {
 			t.Errorf("Wrong where for '%d': '%s' (err: %v)", i, w, err)
 		}
 	}
@@ -86,7 +86,7 @@ func TestDecodeWhere(t *testing.T) {
 		t.Errorf("cannot open json file")
 	}
 	defer config.Close()
-	plant, err := gohome.LoadPlant(config)
+	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		t.Errorf("cannot load plant from config file")
 	}
@@ -100,13 +100,12 @@ func TestDecodeWhere(t *testing.T) {
 		"":   "",
 	}
 	for w, e := range exp {
-		wh := gohome.Where(w)
-		dec, err := plant.DecodeWhere(wh)
-		if dec != e {
-			t.Errorf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
+		wh, err := plant.WhereFromCode(w)
+		if wh.Desc != e {
+			t.Errorf("Where not decoded correctly, exp:%s  decoded:%s", e, wh.Desc)
 		}
 		if err != nil {
-			t.Logf("Where not decoded correctly, exp:%s  decoded:%s", wh, dec)
+			t.Logf("Where not decoded correctly, exp:%s  decoded:%s", e, wh.Desc)
 		}
 	}
 }
@@ -140,8 +139,8 @@ func TestParseParams(t *testing.T) {
 		"":          []string{"", "", "", "INVALID"},
 	}
 	for m, ts := range exp {
-		ot, tt, et, k := plant.Explain(gohome.ParseFrame(m))
-		if string(ot) != ts[0] || string(tt) != ts[1] || string(et) != ts[2] || k != ts[3] {
+		msg := plant.ParseFrame(m)
+		if msg.Who.Desc != ts[0] || msg.What.Desc != ts[1] || msg.Where.Desc != ts[2] || msg.Kind != ts[3] {
 			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2], k, ts[3])
 		}
 	}
