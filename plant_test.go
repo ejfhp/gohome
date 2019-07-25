@@ -141,7 +141,7 @@ func TestParseParams(t *testing.T) {
 	for m, ts := range exp {
 		msg := plant.ParseFrame(m)
 		if msg.Who.Desc != ts[0] || msg.What.Desc != ts[1] || msg.Where.Desc != ts[2] || msg.Kind != ts[3] {
-			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, ot, ts[0], tt, ts[1], et, ts[2], k, ts[3])
+			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, msg.Who.Desc, ts[0], msg.What.Desc, ts[1], msg.Where.Desc, ts[2], msg.Kind, ts[3])
 		}
 	}
 }
@@ -161,7 +161,7 @@ func TestFormatToJSON(t *testing.T) {
 		"":          "{\"who\": \"\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
 	}
 	for m, ts := range exp {
-		json := plant.FormatToJSON(gohome.ParseFrame(m))
+		json := plant.FormatToJSON(plant.ParseFrame(m))
 		if json != ts {
 			t.Errorf("decoded JSON for message '%s' is wrong: %s!=%s", m, json, ts)
 		}

@@ -1,6 +1,7 @@
 package gohome_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/savardiego/gohome"
@@ -153,34 +154,35 @@ func TestDecodeWhatFromFrame(t *testing.T) {
 }
 
 func TestMessageIsValid(t *testing.T) {
-	messages := map[string][]int{
-		"*1*1*23##":      []int{"true", 0},
-		"*1*0*13##":      []int{1, 0},
-		"*1*11*1##":      []int{1, 0},
-		"*1*18*21##":     []int{1, 0},
-		"*#1*2##":        []int{1, 1},
-		"*#1*18*10##":    []int{1, 3},
-		"*#1*18*#10*5##": []int{1, 4},
-		"*#*1##":         []int{1, 2},
-		"*99*1##":        []int{1, 2},
-		"*99*9##":        []int{1, 2},
-		"21##":           []int{0, -1},
-		"*##":            []int{0, -1},
-		"*#":             []int{0, -1},
-		"*":              []int{0, -1},
-		"#":              []int{0, -1},
-		"*1*6*d##":       []int{0, -1},
-		"":               []int{0, -1},
-	}/// validity
+	messages := map[string][]string{
+		"*1*1*23##":      []string{"TRUE", "COMMAND"},
+		"*1*0*13##":      []string{"TRUE", "COMMAND"},
+		"*1*11*1##":      []string{"FALSE", "COMMAND"},
+		"*1*18*21##":     []string{"FALSE", "COMMAND"},
+		"*#1*2##":        []string{"FALSE", "REQUEST"},
+		"*#1*18*10##":    []string{"FALSE", "INVALID"},
+		"*#1*18*#10*5##": []string{"FALSE", "DIMENSIONGET"},
+		"*#*1##":         []string{"FALSE", "SPECIAL"},
+		"*99*1##":        []string{"FALSE", "SPECIAL"},
+		"*99*9##":        []string{"FALSE", "SPECIAL"},
+		"21##":           []string{"TRUE", "INVALID"},
+		"*##":            []string{"TRUE", "INVALID"},
+		"*#":             []string{"TRUE", "INVALID"},
+		"*":              []string{"TRUE", "INVALID"},
+		"#":              []string{"TRUE", "INVALID"},
+		"*1*6*d##":       []string{"TRUE", "INVALID"},
+		"":               []string{"TRUE", "INVALID"},
+	} /// validity
 	for m, e := range messages {
-		if v, k := gohome.IsValid(m); v != (e[0] != 0) || k != e[1] {
-			t.Errorf("Wrong validity or vrong kind: %s, got valid:%t kind:%d", m, v, k)
+		valid, _ := strconv.ParseBool(e[0])
+		if v, k := gohome.IsValid(m); v != valid || k != e[1] {
+			t.Errorf("Wrong validity or vrong kind: %s, got valid:%t kind:%s", m, v, k)
 		}
 	}
 }
 
 func TestMessageIsRequest(t *testing.T) {
-	messages := map[string]int{
+	messages := map[string]string{
 		"*1*1*23##":         gohome.COMMAND,
 		"*1*0*13##":         gohome.COMMAND,
 		"*1*11*1##":         gohome.COMMAND,
