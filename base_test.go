@@ -30,7 +30,7 @@ func TestNewWhat(t *testing.T) {
 func TestNewCommand(t *testing.T) {
 	plant := makeTestPlant(t)
 	who := gohome.NewWho("1")
-	what, err := who.WhatFromDesc("turn_on")
+	what, err := who.WhatFromDesc("TURN_ON")
 	if err != nil {
 		t.Errorf("What not found: %v", err)
 	}
@@ -42,22 +42,22 @@ func TestNewCommand(t *testing.T) {
 	expectedFrame := "*1*1*11##"
 
 	if frame != expectedFrame {
-		t.Errorf("Wrong command %v, expected was %v", frame, expectedFrame)
+		t.Errorf("Wrong command %s, expected was %s", frame, expectedFrame)
 	}
 }
 
 func TestWhereFromFrame(t *testing.T) {
 	plant := makeTestPlant(t)
 	messages := [][]string{
-		{"*5*1*23##", "23"},
-		{"*#5*1*#43*8##", "1"},
-		{"*5*0*13##", "13"},
-		{"*5*0*1##", "1"},
-		{"*#5*21##", "21"},
-		{"*#5*21*2##", "21"},
-		{"*#5*1##", "1"},
-		{"*5*2##", ""},
-		{"*5**2##", ""},
+		{"*1*1*23##", "23"},
+		{"*#1*1*#43*8##", "1"},
+		{"*1*0*13##", "13"},
+		{"*1*0*1##", "1"},
+		{"*#1*21##", "21"},
+		{"*#1*21*2##", "21"},
+		{"*#1*1##", "1"},
+		{"*1*2##", ""},
+		{"*1**2##", ""},
 		{"", ""},
 	}
 	for i, m := range messages {

@@ -59,11 +59,11 @@ func (m Message) Frame() string {
 		return m.special
 	}
 	switch m.Kind {
-	case COMMAND:
-		frame := fmt.Sprintf("*#%s*%s##", m.Who, m.Where)
-		return frame
 	case REQUEST:
-		frame := fmt.Sprintf("*%s*%s*%s##", m.Who, m.What, m.Where)
+		frame := fmt.Sprintf("*#%s*%s##", m.Who.Code, m.Where.Code)
+		return frame
+	case COMMAND:
+		frame := fmt.Sprintf("*%s*%s*%s##", m.Who.Code, m.What.Code, m.Where.Code)
 		return frame
 	}
 	return ""
