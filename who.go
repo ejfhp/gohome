@@ -1,6 +1,8 @@
 package gohome
 
-import "strings"
+import (
+	"strings"
+)
 
 type Who struct {
 	Code    string
@@ -11,7 +13,7 @@ type Who struct {
 var actions_1 = map[string]string{
 	"0":    "TURN_OFF",
 	"1":    "TURN_ON",
-	"2":    "TURN_ON",
+	"2":    "SET_20",
 	"3":    "SET_30",
 	"4":    "SET_40",
 	"5":    "SET_50",

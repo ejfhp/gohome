@@ -83,6 +83,7 @@ func (p *Plant) WhereFromDesc(text string) (Where, error) {
 }
 
 func (p *Plant) ParseFrame(frame string) Message {
+	fmt.Printf("Checking frame: %s\n", frame)
 	message := Message{}
 	valid, msgkind := IsValid(frame)
 	if !valid {

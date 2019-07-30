@@ -2,6 +2,7 @@ package gohome_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 
@@ -140,12 +141,143 @@ func TestParseParams(t *testing.T) {
 	}
 	for m, ts := range exp {
 		msg := plant.ParseFrame(m)
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		fmt.Printf("frame: %s", m)
 		if msg.Who.Desc != ts[0] || msg.What.Desc != ts[1] || msg.Where.Desc != ts[2] || msg.Kind != ts[3] {
 			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, msg.Who.Desc, ts[0], msg.What.Desc, ts[1], msg.Where.Desc, ts[2], msg.Kind, ts[3])
 		}
 	}
 }
 
+func TestWhereFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
+	messages := [][]string{
+		{"*1*1*23##", "23"},
+		{"*#1*1*#43*8##", "1"},
+		{"*1*0*13##", "13"},
+		{"*1*0*1##", "1"},
+		{"*#1*21##", "21"},
+		{"*#1*21*2##", "21"},
+		{"*#1*1##", "1"},
+		{"*1*2##", ""},
+		{"*1**2##", ""},
+		{"", ""},
+	}
+	for i, m := range messages {
+		msg := plant.ParseFrame(m[0])
+		expWhereCode := m[1]
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		if msg.Where.Code != expWhereCode {
+			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:'%s'", i, expWhereCode, msg.Where.Code)
+		}
+	}
+}
+
+func TestWhoFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
+	messages := [][]string{
+		{"*1*1*23##", "1"},
+		{"*#1*1*#43*8##", "1"},
+		{"*1*0*13##", "1"},
+		{"*1*0*1##", "1"},
+		{"*#1*21##", "1"},
+		{"*#1*21*2##", "1"},
+		{"*#1*1##", "1"},
+		{"*1*2##", ""},
+		{"*1**2##", ""},
+		{"", ""},
+	}
+	for i, m := range messages {
+		msg := plant.ParseFrame(m[0])
+		expWho := gohome.Who{Code: m[1]}
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		if msg.Who.Code != expWho.Code {
+			t.Errorf("%d - Wrong WHO decoded: exp:%s actual:%s", i, expWho, msg.Who)
+		}
+	}
+}
+
+func TestWhatFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
+	messages := [][]string{
+		{"*1*1*23##", "1"},
+		{"*#1*1*#43*8##", ""},
+		{"*1*0*13##", "0"},
+		{"*1*10*13##", "10"},
+		{"*1*0*1##", "0"},
+		{"*#1*21##", ""},
+		{"*#1*21*2##", ""},
+		{"*#1*1##", ""},
+		{"*1*2##", ""},
+		{"*1**2##", ""},
+		{"", ""},
+	}
+	for i, m := range messages {
+		msg := plant.ParseFrame(m[0])
+		expWhat := gohome.What{Code: m[1]}
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		if msg.What.Code != expWhat.Code {
+			t.Errorf("%d - Wrong WHAT decoded: exp:%s actual:%s", i, expWhat, msg.What)
+		}
+	}
+}
+func TestDecodeWhoFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
+	messages := [][]string{
+		{"*1*1*23##", "LIGHT"},
+		{"*1*0*13##", "LIGHT"},
+		{"*1*11*1##", "LIGHT"},
+		{"*1*18*21##", "LIGHT"},
+		{"21##", ""},
+		{"", ""},
+	}
+	for i, m := range messages {
+		msg := plant.ParseFrame(m[0])
+		expWho := m[1]
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		if msg.Who.Desc != expWho {
+			t.Errorf("%d - Wrong WHO decoded: exp:%s actual:%s", i, expWho, msg.Who)
+		}
+	}
+}
+
+func TestDecodeWhatFromFrame(t *testing.T) {
+	plant := makeTestPlant(t)
+	messages := [][]string{
+		{"*1*1*23##", "TURN_ON"},
+		{"*1*0*13##", "TURN_OFF"},
+		{"*1*11*1##", "ON_1_MIN"},
+		{"*1*18*21##", "ON_0_5_SEC"},
+		{"21##", ""},
+		{"", ""},
+	}
+	for i, m := range messages {
+		msg := plant.ParseFrame(m[0])
+		expWhat := m[1]
+		if msg.IsValid() {
+			t.Logf("Frame '%s' is invalid", m)
+			break
+		}
+		if msg.What.Desc != expWhat {
+			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:%s", i, expWhat, msg.What.Desc)
+		}
+	}
+}
 func TestFormatToJSON(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string]string{

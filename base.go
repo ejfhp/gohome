@@ -76,6 +76,13 @@ func (m Message) IsSpecial() bool {
 	return false
 }
 
+func (m Message) IsValid() bool {
+	if m.Kind != INVALID {
+		return true
+	}
+	return false
+}
+
 //NewCommand build a new Command to send to the home plant
 func NewCommand(who *Who, what What, where Where) Message {
 	return Message{Who: who, What: what, Where: where, Kind: COMMAND}
