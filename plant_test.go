@@ -2,7 +2,6 @@ package gohome_test
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"testing"
 
@@ -124,7 +123,7 @@ func TestExport(t *testing.T) {
 	}
 }
 
-func TestParseParams(t *testing.T) {
+func TestParseFrame(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string][]string{
 		"*1*1*11##": []string{"LIGHT", "TURN_ON", "kitchen.table", "COMMAND"},
@@ -141,13 +140,14 @@ func TestParseParams(t *testing.T) {
 	}
 	for m, ts := range exp {
 		msg := plant.ParseFrame(m)
-		if msg.IsValid() {
-			t.Logf("Frame '%s' is invalid", m)
-			break
+		if !msg.IsValid() {
+			if msg.Kind != ts[3] {
+				t.Errorf("decoded/expected values for message '%s' are wrong: %s/%s", m, msg.Kind, ts[3])
+			}
+			continue
 		}
-		fmt.Printf("frame: %s", m)
 		if msg.Who.Desc != ts[0] || msg.What.Desc != ts[1] || msg.Where.Desc != ts[2] || msg.Kind != ts[3] {
-			t.Errorf("decoded values for message '%s' are wrong: %s!=%s  %s!=%s %s!=%s %s!=%s", m, msg.Who.Desc, ts[0], msg.What.Desc, ts[1], msg.Where.Desc, ts[2], msg.Kind, ts[3])
+			t.Errorf("decoded/expected values for message '%s' are wrong: %s %s %s %s", m, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
 		}
 	}
 }
@@ -281,16 +281,16 @@ func TestDecodeWhatFromFrame(t *testing.T) {
 func TestFormatToJSON(t *testing.T) {
 	plant := makeTestPlant(t)
 	exp := map[string]string{
-		"*1*1*11##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"kitchen.table\", \"kind\": \"0\"}",
-		"*1*1*12##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"kitchen.main\", \"kind\": \"0\"}",
-		"*#1*1*##":  "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"living\", \"kind\": \"1\"}",
-		"*1*1*22##": "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"living.tv\", \"kind\": \"0\"}",
-		"*#1*12##":  "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"kitchen.main\", \"kind\": \"1\"}",
-		"*1*1*2##":  "{\"who\": \"LIGHT\", \"what\": \"TURN_ON\", \"where\": \"living\", \"kind\": \"0\"}",
-		"*3*2##":    "{\"who\": \"\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
-		"*1*2##":    "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
-		"*1*1##":    "{\"who\": \"LIGHT\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
-		"":          "{\"who\": \"\", \"what\": \"\", \"where\": \"\", \"kind\": \"-1\"}",
+		"*1*1*11##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.table\",\"kind\":\"COMMAND\"}",
+		"*1*1*12##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.main\",\"kind\":\"COMMAND\"}",
+		"*#1*1*##":  "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"living\",\"kind\":\"INVALID\"}",
+		"*1*1*22##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living.tv\",\"kind\":\"COMMAND\"}",
+		"*#1*12##":  "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"kitchen.main\",\"kind\":\"REQUEST\"}",
+		"*1*1*2##":  "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living\",\"kind\":\"INVALID\"}",
+		"*3*2##":    "{\"who\":\"\", \"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"*1*2##":    "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"*1*1##":    "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"":          "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
 	}
 	for m, ts := range exp {
 		json := plant.FormatToJSON(plant.ParseFrame(m))
@@ -298,4 +298,43 @@ func TestFormatToJSON(t *testing.T) {
 			t.Errorf("decoded JSON for message '%s' is wrong: %s!=%s", m, json, ts)
 		}
 	}
+}
+
+func TestWhereFromCode(t *testing.T) {
+	plant := makeTestPlant(t)
+	wheres := map[string]string{
+		"11": "kitchen.table",
+		"12": "kitchen.main",
+		"1":  "kitchen",
+		"22": "living.tv",
+	}
+	for k, v := range wheres {
+		ambient, err := plant.WhereFromCode(k)
+		if err != nil {
+			t.Errorf("failed to decod where (%s) due to %v", v, err)
+		}
+		if ambient.Desc != v {
+			t.Errorf("decoded where (%s) is not the expected (%s)", ambient.Desc, v)
+		}
+	}
+}
+
+func TestWhereFromDesc(t *testing.T) {
+	plant := makeTestPlant(t)
+	wheres := map[string]string{
+		"kitchen.table": "11",
+		"kitchen.main":  "12",
+		"kitchen":       "1",
+		"living.tv":     "22",
+	}
+	for k, v := range wheres {
+		ambient, err := plant.WhereFromDesc(k)
+		if err != nil {
+			t.Errorf("failed to decod where (%s) due to %v", v, err)
+		}
+		if ambient.Code != v {
+			t.Errorf("decoded where (%s) is not the expected (%s)", ambient.Code, v)
+		}
+	}
+
 }

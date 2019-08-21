@@ -82,6 +82,39 @@ func (p *Plant) WhereFromDesc(text string) (Where, error) {
 	return noWhere, ErrLightNotFound
 }
 
+//Decode returns where defined by the ambient and light names in the plant config file: <ambient>[.<light>]
+func (p *Plant) WhereFromCode(code string) (Where, error) {
+	log.Printf("searching where from code: %s", code)
+	if code == "" {
+		return Where{}, nil
+	}
+	var wtext string
+	if len(code) < 1 || len(code) > 2 {
+		return Where{}, ErrWhereNotInPlant
+	}
+	amb, err := strconv.Atoi(string(code[0:1]))
+	if err != nil {
+		return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
+	}
+	for ka, a := range p.Ambients {
+		if a.Num == amb {
+			wtext = ka
+			if len(code) == 2 {
+				lig, err := strconv.Atoi(string(code[1:2]))
+				if err != nil {
+					return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
+				}
+				for kl, pl := range a.Lights {
+					if pl == lig {
+						wtext = wtext + "." + kl
+					}
+				}
+			}
+		}
+	}
+	return Where{code, wtext}, nil
+}
+
 func (p *Plant) ParseFrame(frame string) Message {
 	fmt.Printf("Checking frame: %s\n", frame)
 	message := Message{}
@@ -149,38 +182,6 @@ func (p *Plant) ParseFrame(frame string) Message {
 		return message
 	}
 	return message
-}
-
-//Decode returns where defined by the ambient an light names in the plant config file: <ambient>[.<light>]
-func (p *Plant) WhereFromCode(code string) (Where, error) {
-	if code == "" {
-		return Where{}, nil
-	}
-	var wtext string
-	if len(code) < 1 || len(code) > 2 {
-		return Where{}, ErrWhereNotInPlant
-	}
-	amb, err := strconv.Atoi(string(code[0:1]))
-	if err != nil {
-		return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
-	}
-	for ka, a := range p.Ambients {
-		if a.Num == amb {
-			wtext = ka
-			if len(code) == 2 {
-				lig, err := strconv.Atoi(string(code[1:2]))
-				if err != nil {
-					return Where{}, errors.Wrapf(ErrWhereNotInPlant, "where: %v", code)
-				}
-				for kl, pl := range a.Lights {
-					if pl == lig {
-						wtext = wtext + "." + kl
-					}
-				}
-			}
-		}
-	}
-	return Where{code, wtext}, nil
 }
 
 // //Parse return the who, what, where of a message as three different params, and if is a request

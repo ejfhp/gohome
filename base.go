@@ -41,14 +41,19 @@ type Message struct {
 
 func (m Message) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("{")
-	buffer.WriteString("\"WHO\": \"")
-	buffer.WriteString(m.Who.Desc)
+	buffer.WriteString("\"who\": \"")
+	if m.Who != nil {
+		buffer.WriteString(m.Who.Desc)
+	}
 	buffer.WriteString("\", ")
-	buffer.WriteString("\"WHAT\": \"")
+	buffer.WriteString("\"what\": \"")
 	buffer.WriteString(m.What.Desc)
 	buffer.WriteString("\", ")
-	buffer.WriteString("\"WHERE\": \"")
+	buffer.WriteString("\"where\": \"")
 	buffer.WriteString(m.Where.Desc)
+	buffer.WriteString("\", ")
+	buffer.WriteString("\"kind\": \"")
+	buffer.WriteString(m.Kind)
 	buffer.WriteString("\"")
 	buffer.WriteString("}")
 	return buffer.Bytes(), nil
