@@ -42,7 +42,7 @@ func TestDoTurnOn(t *testing.T) {
 	}
 }
 
-func TestAsk(t *testing.T) {
+func TestAskOne(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
@@ -73,7 +73,7 @@ func TestAskMany(t *testing.T) {
 		t.Logf("New Home contruction failed.")
 		t.Fail()
 	}
-	// const query = "*#1*0##"
+	//const query = "*#1*0##"
 	query := gohome.SystemMessages["QUERY_ALL"]
 	answer, err := h.Ask(query)
 	if err != nil {
@@ -83,7 +83,12 @@ func TestAskMany(t *testing.T) {
 		t.Logf("Query failed.")
 		t.Fail()
 	}
-	fmt.Println(answer)
+	for _, m := range answer {
+		if m.Who == nil {
+			t.Errorf("WHO is NIL")
+		}
+		fmt.Printf("%s: %s %s %s %s\n", m.Frame(), m.Who.Desc, m.What, m.Where.Desc, m.Kind)
+	}
 }
 
 func TestListen(t *testing.T) {

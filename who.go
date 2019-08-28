@@ -45,12 +45,18 @@ var actions_1 = map[string]string{
 	"1000": "JOLLY",
 }
 
+var none = &Who{Code: "", Desc: "", Actions: map[string]string{}}
+
 var allWho = map[string]*Who{
 	"1": &Who{Code: "1", Desc: "LIGHT", Actions: actions_1},
 }
 
 func NewWho(who string) *Who {
-	return allWho[who]
+	w, ok := allWho[who]
+	if !ok {
+		return none
+	}
+	return w
 }
 
 func (w Who) WhatFromDesc(text string) (What, error) {

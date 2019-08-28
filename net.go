@@ -23,12 +23,12 @@ type HomeError struct {
 
 // SystemMessages contains the OpenWebNet codes for various system messages
 var SystemMessages = map[string]Message{
-	"ACK":                   Message{special: "*#*1##"},
-	"NACK":                  Message{special: "*#*0##"},
-	"QUERY_ALL":             Message{special: "*#5##"},
-	"OPEN_COMMAND_SESSION":  Message{special: "*99*0##"}, // OpenWebNet command to ask for a command session
-	"OPEN_EVENT_SESSION":    Message{special: "*99*1##"},
-	"OPEN_SCENARIO_SESSION": Message{special: "*99*9##"},
+	"ACK":                   Message{Kind: SPECIAL, special: "*#*1##"},
+	"NACK":                  Message{Kind: SPECIAL, special: "*#*0##"},
+	"QUERY_ALL":             Message{Kind: SPECIAL, special: "*#1*0##"},
+	"OPEN_COMMAND_SESSION":  Message{Kind: SPECIAL, special: "*99*0##"}, // OpenWebNet command to ask for a command session
+	"OPEN_EVENT_SESSION":    Message{Kind: SPECIAL, special: "*99*1##"},
+	"OPEN_SCENARIO_SESSION": Message{Kind: SPECIAL, special: "*99*9##"},
 }
 
 type Cable struct {
@@ -61,7 +61,7 @@ func (h *Home) Do(command Message) error {
 //Ask the system
 func (h *Home) Ask(request Message) ([]Message, error) {
 	log.Printf("Home.Ask")
-	if request.Kind != REQUEST {
+	if request.Kind != REQUEST && request.Kind != SPECIAL {
 		return nil, errors.Errorf("Message is not a request: %v", request)
 	}
 	frames, err := h.cable.sendRequest(request)
@@ -149,6 +149,7 @@ func (c *Cable) sendRequest(request Message) ([]string, error) {
 	}
 	answers := make([]string, 0, 10)
 	for {
+		log.Printf("receiving...")
 		a, err := c.receive(conn, false)
 		if err != nil {
 			return answers, errors.Wrapf(err, "failed to receive answer for request: %v", request)

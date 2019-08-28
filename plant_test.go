@@ -169,9 +169,9 @@ func TestWhereFromFrame(t *testing.T) {
 	for i, m := range messages {
 		msg := plant.ParseFrame(m[0])
 		expWhereCode := m[1]
-		if msg.IsValid() {
+		if !msg.IsValid() {
 			t.Logf("Frame '%s' is invalid", m)
-			break
+			continue
 		}
 		if msg.Where.Code != expWhereCode {
 			t.Errorf("%d - Wrong WHERE decoded: exp:%s actual:'%s'", i, expWhereCode, msg.Where.Code)
@@ -283,13 +283,13 @@ func TestFormatToJSON(t *testing.T) {
 	exp := map[string]string{
 		"*1*1*11##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.table\",\"kind\":\"COMMAND\"}",
 		"*1*1*12##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.main\",\"kind\":\"COMMAND\"}",
-		"*#1*1*##":  "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"living\",\"kind\":\"INVALID\"}",
+		"*#1*1*##":  "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
 		"*1*1*22##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living.tv\",\"kind\":\"COMMAND\"}",
 		"*#1*12##":  "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"kitchen.main\",\"kind\":\"REQUEST\"}",
-		"*1*1*2##":  "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living\",\"kind\":\"INVALID\"}",
-		"*3*2##":    "{\"who\":\"\", \"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
-		"*1*2##":    "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
-		"*1*1##":    "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"*1*1*2##":  "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living\",\"kind\":\"COMMAND\"}",
+		"*3*2##":    "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"*1*2##":    "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
+		"*1*1##":    "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
 		"":          "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
 	}
 	for m, ts := range exp {

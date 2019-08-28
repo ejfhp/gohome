@@ -84,7 +84,6 @@ func (p *Plant) WhereFromDesc(text string) (Where, error) {
 
 //Decode returns where defined by the ambient and light names in the plant config file: <ambient>[.<light>]
 func (p *Plant) WhereFromCode(code string) (Where, error) {
-	log.Printf("searching where from code: %s", code)
 	if code == "" {
 		return Where{}, nil
 	}
@@ -115,22 +114,25 @@ func (p *Plant) WhereFromCode(code string) (Where, error) {
 	return Where{code, wtext}, nil
 }
 
+//ParseFrame parse a OWN frame and returns a structured message.
 func (p *Plant) ParseFrame(frame string) Message {
 	fmt.Printf("Checking frame: %s\n", frame)
 	message := Message{}
 	valid, msgkind := IsValid(frame)
 	if !valid {
 		fmt.Printf("Frame not valid: %s\n", frame)
-		return Message{Kind: INVALID}
+		message.Kind = INVALID
+		return message
 	}
 	if msgkind == REQUEST {
 		t := regexpRequest.FindStringSubmatch(string(frame))
-		fmt.Printf("Parse reques (%s): %v\n", frame, t)
+		fmt.Printf("Frame (%s) recognized as REQUEST: %v\n", frame, t)
 		message.Who = NewWho(t[1])
 		where, err := p.WhereFromCode(t[2])
 		if err != nil {
 			log.Printf("Frame not valid: %s due to: %v\n", frame, err)
-			return Message{Kind: INVALID}
+			message.Kind = INVALID
+			return message
 		}
 		message.Where = where
 		message.Kind = REQUEST
@@ -138,18 +140,20 @@ func (p *Plant) ParseFrame(frame string) Message {
 	}
 	if msgkind == COMMAND {
 		t := regexpCommand.FindStringSubmatch(string(frame))
-		log.Printf("Parse command (%s): %v\n", frame, t)
+		log.Printf("Frame (%s) recognized as COMMAND: %v\n", frame, t)
 		message.Who = NewWho(t[1])
 		what, err := message.Who.WhatFromCode(t[2])
 		if err != nil {
 			log.Printf("Frame what not valid: %s due to: %v\n", frame, err)
-			return Message{Kind: INVALID}
+			message.Kind = INVALID
+			return message
 		}
 		message.What = what
-		where, err := p.WhereFromCode(t[2])
+		where, err := p.WhereFromCode(t[3])
 		if err != nil {
 			log.Printf("Frame where not valid: %s due to: %v\n", frame, err)
-			return Message{Kind: INVALID}
+			message.Kind = INVALID
+			return message
 		}
 		message.Where = where
 		message.Kind = COMMAND
@@ -157,12 +161,13 @@ func (p *Plant) ParseFrame(frame string) Message {
 	}
 	if msgkind == DIMENSIONGET {
 		t := regexpDimensionGet.FindStringSubmatch(string(frame))
-		fmt.Printf("Parse dimget (%s): %v\n", frame, t)
+		fmt.Printf("Frame (%s) recognized as DIMENSIONGET: %v\n", frame, t)
 		message.Who = NewWho(t[1])
 		where, err := p.WhereFromCode(t[2])
 		if err != nil {
 			log.Printf("Frame where not valid: %s due to: %v\n", frame, err)
-			return Message{Kind: INVALID}
+			message.Kind = INVALID
+			return message
 		}
 		message.Where = where
 		message.Kind = DIMENSIONGET
@@ -170,12 +175,13 @@ func (p *Plant) ParseFrame(frame string) Message {
 	}
 	if msgkind == DIMENSIONSET {
 		t := regexpDimensionSet.FindStringSubmatch(string(frame))
-		fmt.Printf("Parse dimset (%s): %v\n", frame, t)
+		fmt.Printf("Frame (%s) recognized as DIMENSIONSET: %v\n", frame, t)
 		message.Who = NewWho(t[1])
 		where, err := p.WhereFromCode(t[2])
 		if err != nil {
 			log.Printf("Frame where not valid: %s due to: %v\n", frame, err)
-			return Message{Kind: INVALID}
+			message.Kind = INVALID
+			return message
 		}
 		message.Where = where
 		message.Kind = DIMENSIONSET

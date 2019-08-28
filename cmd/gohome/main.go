@@ -48,25 +48,25 @@ func executeCommand(command []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
-	plant, err := gohome.LoadPlant(config)
+	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
 	config.Close()
 	fmt.Printf("who is %s\n", command[0])
 	who := gohome.NewWho(command[0])
-	if who == "" {
+	if who.Desc == "" {
 		return errors.Errorf("unknown <who> in command:%s", command[0])
 	}
 	fmt.Printf("what is %s\n", command[1])
-	what := who.NewWhat(command[1])
-	if what == "" {
-		return errors.Errorf("unknown <what> in command: %s", command[1])
+	what, err := who.WhatFromDesc(command[1])
+	if err != nil {
+		return errors.Errorf("Cannot get <what> from command: %s due to: %v", command[1], err)
 	}
 	fmt.Printf("where is %s\n", command[2])
-	where, err := plant.NewWhere(command[2])
+	where, err := plant.WhereFromDesc(command[2])
 	if err != nil {
-		return errors.Wrapf(err, "wrong <where> in command: %s", command[2])
+		return errors.Wrapf(err, "Cannot get <where> from command: %s due to: %v", command[2], err)
 	}
 	fmt.Printf("executing command, who:%s what:%s where:%s\n", who, what, where)
 	cmd := gohome.NewCommand(who, what, where)
@@ -79,7 +79,7 @@ func showPlant(command []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
-	plant, err := gohome.LoadPlant(config)
+	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
@@ -101,26 +101,24 @@ func showHome(command []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
-	plant, err := gohome.LoadPlant(config)
+	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
 	config.Close()
 	home := gohome.NewHome(plant)
-	const queryStatus = "*#1*0##"
-	// const queryStatus = "*#5##"
+	queryStatus := gohome.SystemMessages["QUERY_ALL"]
 	statuses, err := home.Ask(queryStatus)
 	if err != nil {
-		return errors.Wrapf(err, "cannot get plant status, queryStatus: %s", queryStatus)
+		return errors.Wrapf(err, "cannot get plant status, queryFrame: %s", queryStatus.Kind)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
 	fmt.Fprintln(w, "N\tWHO\tWHERE\tSTATUS")
 	for i, m := range statuses {
-		who, what, where, err := plant.Parse(m)
 		if err != nil {
-			fmt.Printf("failed to decode message '%s' due to: %v", m, err)
+			fmt.Printf("failed to decode message '%v' due to: %v", m, err)
 		}
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", i, who, where, what)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", i, m.Who.Desc, m.Where.Desc, m.What.Desc)
 	}
 	w.Flush()
 	return nil
@@ -181,7 +179,7 @@ func advancedHelp(pars []string) {
 	fmt.Printf("        where= <room>         (in case of ambient)\n")
 	fmt.Printf("        where= general        (in case of general)\n")
 	fmt.Printf("\n\nCOMMANDS\n   LIGHT\n")
-	for k := range gohome.WhoWhat[gohome.Light] {
+	for k := range gohome.NewWho("LIGHT").Actions {
 		fmt.Printf("      %s\n", k)
 	}
 }
