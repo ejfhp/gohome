@@ -28,8 +28,8 @@ func main() {
 	case "show":
 		showHome(os.Args[1:])
 		break
-	case "light":
-		err := executeCommand(os.Args[1:])
+	case "do":
+		err := executeCommand(os.Args[2:])
 		if err != nil {
 			fmt.Printf("Cannot complete command executiion: %+v\n", err)
 		}
@@ -68,7 +68,7 @@ func executeCommand(command []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "Cannot get <where> from command: %s due to: %v", command[2], err)
 	}
-	fmt.Printf("executing command, who:%s what:%s where:%s\n", who, what, where)
+	fmt.Printf("executing command, who:%s what:%s where:%s\n", who.Desc, what.Desc, where.Desc)
 	cmd := gohome.NewCommand(who, what, where)
 	home := gohome.NewHome(plant)
 	return home.Do(cmd)
@@ -125,36 +125,31 @@ func showHome(command []string) error {
 }
 
 func listen() error {
-	// config, err := os.Open("gohome.json")
-	// if err != nil {
-	// 	t.Errorf("cannot open json file")
-	// }
-	// defer config.Close()
-	// plant, err := gohome.LoadPlant(config)
-	// if err != nil {
-	// 	t.Errorf("cannot load plant from config file")
-	// }
-	// if plant.ServerAddress() != "192.168.0.35:20000" {
-	// 	t.Errorf("Import plant configuration has wrong address: '%s', len:%d", plant.ServerAddress(), len(plant.ServerAddress()))
-	// }
-	// plant := makeTestPlant(t)
-	// h := gohome.NewHome(plant)
-	// if h == nil {
-	// 	t.Logf("New Home contruction failed.")
-	// 	t.Fail()
-	// }
-	// listen, stop, errs := h.Listen()
-	// config, err := os.Open(defaultConf)
-	// if err != nil {
-	// 	return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
-	// }
-	// plant, err := gohome.LoadPlant(config)
-	// if err != nil {
-	// 	return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
-	// }
-	// config.Close()
-	// home := gohome.NewHome(plant)
-	// home.Listen()
+	config, err := os.Open(defaultConf)
+	if err != nil {
+		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+	}
+	plant, err := gohome.NewPlant(config)
+	if err != nil {
+		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
+	}
+	config.Close()
+	home := gohome.NewHome(plant)
+	listen, _, errs := home.Listen()
+	ok := true
+	for ok {
+		select {
+		case e, ok := <-errs:
+			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
+		case f, ok := <-listen:
+			if v, _ := gohome.IsValid(f); v {
+				msg := plant.ParseFrame(f)
+				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
+			} else {
+				fmt.Printf(">>>>> message invalid: '%s'\n", f)
+			}
+		}
+	}
 	return nil
 }
 
@@ -167,6 +162,7 @@ func basicHelp() {
 	fmt.Printf("     %s plant: print current plant from file gohome.json\n", os.Args[0])
 	fmt.Printf("     %s show: show status of all home components\n", os.Args[0])
 	fmt.Printf("     %s listen: listen to network and show events\n", os.Args[0])
+	fmt.Printf("     %s do: listen to network and show events\n", os.Args[0])
 }
 
 func advancedHelp(pars []string) {

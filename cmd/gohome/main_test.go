@@ -7,34 +7,54 @@ import (
 )
 
 func TestExecuteCommand1(t *testing.T) {
-	commandline := []string{"light", "TURN_ON", "kitchen.main"}
+	commandline := []string{"LIGHT", "TURN_OFF", "kitchen.main"}
 	if err := executeCommand(commandline); err != nil {
 		t.Errorf("Command failed due to: %v", err)
 	}
 }
 func TestExecuteCommand2(t *testing.T) {
-	commandline := []string{"light", "ON_30_SEC", "kitchen.main"}
+	commandline := []string{"LIGHT", "ON_30_SEC", "kitchen.main"}
 	if err := executeCommand(commandline); err != nil {
 		t.Errorf("Command failed due to: %v", err)
 	}
 }
 
-func TestCommandMain(t *testing.T) {
+func TestMainDo(t *testing.T) {
 	fmt.Printf("Start main..\n")
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	os.Args = []string{"gohome", "light", "TURN_OFF", "cucina.tavolo"}
+	os.Args = []string{"gohome", "do", "LIGHT", "TURN_OFF", "kitchen.main"}
 	main()
 	fmt.Printf("Runned\n")
 }
 
-func TestCommandShow(t *testing.T) {
+func TestMainShow(t *testing.T) {
 	fmt.Printf("Start main..\n")
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
 	os.Args = []string{"gohome", "show"}
+	main()
+	fmt.Printf("Runned\n")
+}
+
+func TestMainPlant(t *testing.T) {
+	fmt.Printf("Start main..\n")
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode.")
+	}
+	os.Args = []string{"gohome", "plant"}
+	main()
+	fmt.Printf("Runned\n")
+}
+
+func TestMainListen(t *testing.T) {
+	fmt.Printf("Start main..\n")
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode.")
+	}
+	os.Args = []string{"gohome", "listen"}
 	main()
 	fmt.Printf("Runned\n")
 }

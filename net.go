@@ -192,7 +192,7 @@ Listen:
 			if err != nil {
 				errs <- errors.Wrapf(err, "failed to receive events")
 			}
-			if ok, _ := IsValid(frame); ok {
+			if ok, _ := IsValid(frame); ok == true {
 				out <- frame
 			}
 		}
@@ -228,7 +228,7 @@ func (c *Cable) receive(conn *net.TCPConn, noTimeout bool) (string, error) {
 	frame := make([]byte, 0, 20)
 	b := make([]byte, 1)
 	for {
-		conn.SetReadDeadline(time.Now().Add(time.Second * 1))
+		conn.SetReadDeadline(time.Now().Add(time.Second * 10))
 		n, err := conn.Read(b)
 		if err, ok := err.(net.Error); ok && err.Timeout() && noTimeout {
 			log.Printf("...timeout")

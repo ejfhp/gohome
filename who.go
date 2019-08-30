@@ -45,16 +45,18 @@ var actions_1 = map[string]string{
 	"1000": "JOLLY",
 }
 
-var none = &Who{Code: "", Desc: "", Actions: map[string]string{}}
+var whoNone = &Who{Code: "", Desc: "", Actions: map[string]string{}}
+var whoLight = &Who{Code: "1", Desc: "LIGHT", Actions: actions_1}
 
 var allWho = map[string]*Who{
-	"1": &Who{Code: "1", Desc: "LIGHT", Actions: actions_1},
+	"1":     whoLight,
+	"LIGHT": whoLight,
 }
 
 func NewWho(who string) *Who {
 	w, ok := allWho[who]
 	if !ok {
-		return none
+		return whoNone
 	}
 	return w
 }
