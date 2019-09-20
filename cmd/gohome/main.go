@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
@@ -17,16 +18,17 @@ func main() {
 		basicHelp()
 		return
 	}
+	var err error
 	cmd := os.Args[1]
 	switch cmd {
 	case "help":
 		advancedHelp(os.Args[1:])
 		break
 	case "plant":
-		showPlant(os.Args[1:])
+		err = showPlant(os.Args[1:])
 		break
 	case "show":
-		showHome(os.Args[1:])
+		err = showHome(os.Args[1:])
 		break
 	case "do":
 		err := executeCommand(os.Args[2:])
@@ -35,16 +37,19 @@ func main() {
 		}
 		break
 	case "listen":
-		listen()
+		err = listen()
 		break
 	default:
 		basicHelp()
 		break
 	}
+	if err != nil {
+		fmt.Printf("Unfortunately something went wrong: %v\n", err)
+	}
 }
 
 func executeCommand(command []string) error {
-	config, err := os.Open(defaultConf)
+	config, err := openPlantFile()
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
@@ -75,7 +80,7 @@ func executeCommand(command []string) error {
 }
 
 func showPlant(command []string) error {
-	config, err := os.Open(defaultConf)
+	config, err := openPlantFile()
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
@@ -97,7 +102,7 @@ func showPlant(command []string) error {
 }
 
 func showHome(command []string) error {
-	config, err := os.Open(defaultConf)
+	config, err := openPlantFile()
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
@@ -125,7 +130,7 @@ func showHome(command []string) error {
 }
 
 func listen() error {
-	config, err := os.Open(defaultConf)
+	config, err := openPlantFile()
 	if err != nil {
 		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
@@ -153,6 +158,21 @@ func listen() error {
 	return nil
 }
 
+func openPlantFile() (*os.File, error) {
+	gohomePath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	gohomeDir := filepath.Dir(gohomePath)
+	plantFilePath := filepath.Join(gohomeDir, defaultConf)
+	config, err := os.Open(plantFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+
+}
+
 func basicHelp() {
 	fmt.Printf("GoHome,\n")
 	fmt.Printf("a simple command line tool to control a Bticino MyHome plant.\n")
@@ -169,13 +189,13 @@ func advancedHelp(pars []string) {
 	fmt.Printf("ADVANCED HELP\n")
 	fmt.Printf("      default configuration file is \"gohome.json\"\n\n")
 	fmt.Printf("      %s  <who> <what> <where>\n", os.Args[0])
-	fmt.Printf("        who= light\n")
-	fmt.Printf("        what= <command>\n")
-	fmt.Printf("        where= <room>.<light> (in case of single light)\n")
-	fmt.Printf("        where= <room>         (in case of ambient)\n")
-	fmt.Printf("        where= general        (in case of general)\n")
-	fmt.Printf("\n\nCOMMANDS\n   LIGHT\n")
-	for k := range gohome.NewWho("LIGHT").Actions {
-		fmt.Printf("      %s\n", k)
+	fmt.Printf("        who:   LIGHT (currently work only on lights)\n")
+	fmt.Printf("        what:  <command>\n")
+	fmt.Printf("        where: <room>.<light> (in case of single light)\n")
+	fmt.Printf("        where: <room>         (in case of ambient)\n")
+	fmt.Printf("        where: general        (in case of general)\n")
+	fmt.Printf("\n\nFor LIGHT <command> is one of:\n")
+	for _, v := range gohome.NewWho("LIGHT").Actions {
+		fmt.Printf("      %v\n", v)
 	}
 }

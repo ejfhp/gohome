@@ -42,6 +42,9 @@ type Plant struct {
 
 //NewPlant load a plant configuration from a json file. Return a pointer to the Plant that will be used.
 func NewPlant(config io.Reader) (*Plant, error) {
+	if config == nil {
+		return nil, errors.New("Plant configuration is nil")
+	}
 	decoder := json.NewDecoder(config)
 	plant := Plant{}
 	err := decoder.Decode(&plant)
@@ -190,30 +193,6 @@ func (p *Plant) ParseFrame(frame string) Message {
 	return message
 }
 
-// //Parse return the who, what, where of a message as three different params, and if is a request
-// func (p *Plant) Explain(msg Message) (string, string, string, string) {
-// 	var decwho, decwhat, decwhere string
-// 	var err error
-// 	decwho, err = DecodeWho(msg.Who)
-// 	if err != nil {
-// 		log.Printf("Plant.Parse - cannot decode WHO of message '%v' due to: %v", msg, err)
-// 		return decwho, decwhat, decwhere, "INVALID"
-// 	}
-// 	decwhere, err = p.DecodeWhere(msg.Where)
-// 	if err != nil {
-// 		log.Printf("Plant.Parse - cannot decode WHERE of message '%v' due to: %v", msg, err)
-// 		return decwho, decwhat, decwhere, "INVALID"
-// 	}
-// 	if msg.Kind == COMMAND {
-// 		decwhat, err = msg.Who.DecodeWhat(msg.What)
-// 		if err != nil {
-// 			log.Printf("Plant.Parse - cannot decode WHAT of message '%v' due to: %v", msg, err)
-// 			return decwho, decwhat, decwhere, "INVALID"
-// 		}
-// 	}
-// 	return decwho, decwhat, decwhere, ExplainKind(msg.Kind)
-// V
-
 //FormatToJSON returns the who, what, where of a message in a JSON formatted string
 func (p *Plant) FormatToJSON(msg Message) string {
 	j, err := json.Marshal(msg)
@@ -224,8 +203,39 @@ func (p *Plant) FormatToJSON(msg Message) string {
 	return string(j)
 }
 
-func (p *Plant) ParseFromJSON(json string) Message {
-	return Message{}
+func (p *Plant) ParseFromJSON(jsonMessage string) Message {
+	var mapMsg map[string]interface{}
+	msg := Message{}
+	json.Unmarshal([]byte(jsonMessage), &mapMsg)
+	who, ok := mapMsg["who"].(string)
+	if !ok {
+		fmt.Printf("who not found\n")
+		return Message{Kind: INVALID}
+	}
+	msg.Who = NewWho(who)
+	var err error
+	var wa What
+	var we Where
+	what, ok := mapMsg["what"].(string)
+	if ok {
+		wa, err = msg.Who.WhatFromDesc(what)
+		msg.What = wa
+	}
+	where, ok := mapMsg["where"].(string)
+	if !ok {
+		fmt.Printf("where not found\n")
+		return Message{Kind: INVALID}
+	}
+	we, err = p.WhereFromDesc(where)
+	msg.Where = we
+	kind := mapMsg["kind"].(string)
+	msg.Kind = kind
+	if err != nil {
+		fmt.Printf("cannot parse message from JSON due to %v\n", err)
+		return Message{Kind: INVALID}
+	}
+	fmt.Println(mapMsg)
+	return msg
 }
 
 //ServerAddress returns the server address for the loaded configuration

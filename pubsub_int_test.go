@@ -13,7 +13,7 @@ go test -short
 
 */
 
-func SkipTestPubSubListen(t *testing.T) {
+func TestPubSubListen(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}

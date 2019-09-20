@@ -2,6 +2,7 @@ package gohome_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 
@@ -296,6 +297,24 @@ func TestFormatToJSON(t *testing.T) {
 		json := plant.FormatToJSON(plant.ParseFrame(m))
 		if json != ts {
 			t.Errorf("decoded JSON for message '%s' is wrong: %s!=%s", m, json, ts)
+		}
+	}
+}
+
+func TestParseFromJSON(t *testing.T) {
+	plant := makeTestPlant(t)
+	exp := map[string]string{
+		"*1*1*11##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.table\",\"kind\":\"COMMAND\"}",
+		"*1*1*12##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"kitchen.main\",\"kind\":\"COMMAND\"}",
+		"*1*1*22##": "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living.tv\",\"kind\":\"COMMAND\"}",
+		"*#1*12##":  "{\"who\":\"LIGHT\",\"what\":\"\",\"where\":\"kitchen.main\",\"kind\":\"REQUEST\"}",
+		"*1*1*2##":  "{\"who\":\"LIGHT\",\"what\":\"TURN_ON\",\"where\":\"living\",\"kind\":\"COMMAND\"}",
+	}
+	for _, ts := range exp {
+		frame := plant.ParseFromJSON(ts).Frame()
+		fmt.Printf("Frame from JSON: '%v' exp: '%v'\n", frame, exp[frame])
+		if exp[frame] == "" {
+			t.Errorf("decoded frame is '%s' and json is %s", frame, ts)
 		}
 	}
 }

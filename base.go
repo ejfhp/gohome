@@ -1,10 +1,9 @@
 package gohome
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
-
+  "encoding/json" 
 	"github.com/pkg/errors"
 )
 
@@ -32,31 +31,32 @@ type What struct {
 }
 
 type Message struct {
-	Who     *Who
-	What    What
-	Where   Where
-	Kind    string
+	Who     *Who `json:who`
+	What    What `json:what`
+	Where   Where `json:where`
+	Kind    string `json:kind`
 	special string
 }
 
 func (m Message) MarshalJSON() ([]byte, error) {
-	buffer := bytes.NewBufferString("{")
-	buffer.WriteString("\"who\": \"")
-	if m.Who != nil {
-		buffer.WriteString(m.Who.Desc)
-	}
-	buffer.WriteString("\", ")
-	buffer.WriteString("\"what\": \"")
-	buffer.WriteString(m.What.Desc)
-	buffer.WriteString("\", ")
-	buffer.WriteString("\"where\": \"")
-	buffer.WriteString(m.Where.Desc)
-	buffer.WriteString("\", ")
-	buffer.WriteString("\"kind\": \"")
-	buffer.WriteString(m.Kind)
-	buffer.WriteString("\"")
-	buffer.WriteString("}")
-	return buffer.Bytes(), nil
+	// buffer := bytes.NewBufferString("{")
+	// buffer.WriteString("\"who\": \"")
+	// if m.Who != nil {
+	// 	buffer.WriteString(m.Who.Desc)
+	// }
+	// buffer.WriteString("\", ")
+	// buffer.WriteString("\"what\": \"")
+	// buffer.WriteString(m.What.Desc)
+	// buffer.WriteString("\", ")
+	// buffer.WriteString("\"where\": \"")
+	// buffer.WriteString(m.Where.Desc)
+	// buffer.WriteString("\", ")
+	// buffer.WriteString("\"kind\": \"")
+	// buffer.WriteString(m.Kind)
+	// buffer.WriteString("\"")
+	// buffer.WriteString("}")
+	by, err := json.Marshal(m)
+	return by, err
 }
 
 func (m Message) Frame() string {

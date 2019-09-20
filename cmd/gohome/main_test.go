@@ -49,6 +49,16 @@ func TestMainPlant(t *testing.T) {
 	fmt.Printf("Runned\n")
 }
 
+func TestMainHelp(t *testing.T) {
+	fmt.Printf("Start main..\n")
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode.")
+	}
+	os.Args = []string{"gohome", "help"}
+	main()
+	fmt.Printf("Runned\n")
+}
+
 func TestMainListen(t *testing.T) {
 	fmt.Printf("Start main..\n")
 	if testing.Short() {
