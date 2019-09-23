@@ -1,6 +1,7 @@
 package gohome_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/savardiego/gohome"
@@ -13,6 +14,7 @@ go test -short
 
 */
 
+//gcloud pubsub topics publish calling_home --message={}
 func TestPubSubListen(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
@@ -21,5 +23,9 @@ func TestPubSubListen(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create pubsub %v", err)
 	}
-	pubsub.Listen()
+	msgChan := pubsub.Listen()
+	for m := range msgChan {
+		fmt.Printf("Got message %s, ", m)
+	}
+
 }

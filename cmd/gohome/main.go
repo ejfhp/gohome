@@ -130,15 +130,10 @@ func showHome(command []string) error {
 }
 
 func listen() error {
-	config, err := openPlantFile()
-	if err != nil {
-		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
-	}
-	plant, err := gohome.NewPlant(config)
+	plant, err := openPlant()
 	if err != nil {
 		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
-	config.Close()
 	home := gohome.NewHome(plant)
 	listen, _, errs := home.Listen()
 	ok := true
@@ -170,7 +165,31 @@ func openPlantFile() (*os.File, error) {
 		return nil, err
 	}
 	return config, nil
+}
 
+func openHome() (*gohome.Home, error) {
+	config, err := openPlantFile()
+	defer config.Close()
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+	}
+	plant, err := gohome.NewPlant(config)
+	if err != nil {
+		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
+	}
+	home := gohome.NewHome(plant)
+	return gohome.NewPlant(config)
+}
+
+func remoteControl() error {
+	pubsub, err := gohome.NewPubSub()
+	if err != nil {
+		return err
+	}
+	commandIn := pubsub.Listen()
+	for c := range commandIn {
+
+	}
 }
 
 func basicHelp() {

@@ -59,12 +59,16 @@ func NewPubSub() (*PubSub, error) {
 	return &pubsub, nil
 }
 
-func (p *PubSub) Listen() {
+func (p *PubSub) Listen() <-chan string {
+	pipeOut := make(chan string, 2)
 	err := p.inSub.Receive(p.ctx, func(ctx context.Context, m *pubsub.Message) {
-		log.Printf("Got message: %s", m.Data)
+		msgJSON := string(m.Data)
+		pipeOut <- msgJSON
+		log.Printf("Got message: %s", msgJSON)
 		m.Ack()
 	})
 	if err != nil {
 		fmt.Printf("PUBSUB error: %v\n", err)
 	}
+	return pipeOut
 }

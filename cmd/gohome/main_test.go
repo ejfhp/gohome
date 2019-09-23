@@ -68,3 +68,5 @@ func TestMainListen(t *testing.T) {
 	main()
 	fmt.Printf("Runned\n")
 }
+
+func TestRemoteControl(t *testing.T) {}
