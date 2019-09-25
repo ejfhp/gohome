@@ -39,6 +39,9 @@ func main() {
 	case "listen":
 		err = listen()
 		break
+	case "remote":
+		err = remoteControl()
+		break
 	default:
 		basicHelp()
 		break
@@ -49,15 +52,10 @@ func main() {
 }
 
 func executeCommand(command []string) error {
-	config, err := openPlantFile()
+	home, err := openHome()
 	if err != nil {
-		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+		return errors.Wrapf(err, "cannot open Home")
 	}
-	plant, err := gohome.NewPlant(config)
-	if err != nil {
-		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
-	}
-	config.Close()
 	fmt.Printf("who is %s\n", command[0])
 	who := gohome.NewWho(command[0])
 	if who.Desc == "" {
@@ -69,30 +67,24 @@ func executeCommand(command []string) error {
 		return errors.Errorf("Cannot get <what> from command: %s due to: %v", command[1], err)
 	}
 	fmt.Printf("where is %s\n", command[2])
-	where, err := plant.WhereFromDesc(command[2])
+	where, err := home.Plant.WhereFromDesc(command[2])
 	if err != nil {
 		return errors.Wrapf(err, "Cannot get <where> from command: %s due to: %v", command[2], err)
 	}
 	fmt.Printf("executing command, who:%s what:%s where:%s\n", who.Desc, what.Desc, where.Desc)
 	cmd := gohome.NewCommand(who, what, where)
-	home := gohome.NewHome(plant)
 	return home.Do(cmd)
 }
 
 func showPlant(command []string) error {
-	config, err := openPlantFile()
+	home, err := openHome()
 	if err != nil {
-		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+		return errors.Wrapf(err, "cannot open Home")
 	}
-	plant, err := gohome.NewPlant(config)
-	if err != nil {
-		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
-	}
-	config.Close()
 	fmt.Println("-------------------")
-	fmt.Printf("Plant: %s\n\n", plant.Name)
+	fmt.Printf("Plant: %s\n\n", home.Plant.Name)
 	fmt.Printf("Ambients:\n")
-	for a, amb := range plant.Ambients {
+	for a, amb := range home.Plant.Ambients {
 		fmt.Printf("     %s: %d\n", a, amb.Num)
 		for l, n := range amb.Lights {
 			fmt.Printf("          %s: %d\n", l, n)
@@ -102,16 +94,10 @@ func showPlant(command []string) error {
 }
 
 func showHome(command []string) error {
-	config, err := openPlantFile()
+	home, err := openHome()
 	if err != nil {
-		return errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
+		return errors.Wrapf(err, "cannot open Home")
 	}
-	plant, err := gohome.NewPlant(config)
-	if err != nil {
-		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
-	}
-	config.Close()
-	home := gohome.NewHome(plant)
 	queryStatus := gohome.SystemMessages["QUERY_ALL"]
 	statuses, err := home.Ask(queryStatus)
 	if err != nil {
@@ -130,11 +116,10 @@ func showHome(command []string) error {
 }
 
 func listen() error {
-	plant, err := openPlant()
+	home, err := openHome()
 	if err != nil {
-		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
+		return errors.Wrapf(err, "cannot open Home")
 	}
-	home := gohome.NewHome(plant)
 	listen, _, errs := home.Listen()
 	ok := true
 	for ok {
@@ -143,7 +128,7 @@ func listen() error {
 			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
 		case f, ok := <-listen:
 			if v, _ := gohome.IsValid(f); v {
-				msg := plant.ParseFrame(f)
+				msg := home.Plant.ParseFrame(f)
 				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
 			} else {
 				fmt.Printf(">>>>> message invalid: '%s'\n", f)
@@ -175,21 +160,33 @@ func openHome() (*gohome.Home, error) {
 	}
 	plant, err := gohome.NewPlant(config)
 	if err != nil {
-		return errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
+		return nil, errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
 	}
 	home := gohome.NewHome(plant)
-	return gohome.NewPlant(config)
+	return home, nil
 }
 
 func remoteControl() error {
+	home, err := openHome()
+	if err != nil {
+		return errors.Wrapf(err, "cannot open Home")
+	}
 	pubsub, err := gohome.NewPubSub()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "cannot access Google Pub/Sub")
 	}
-	commandIn := pubsub.Listen()
-	for c := range commandIn {
-
+	incoming, errs := pubsub.Listen(home)
+	for true {
+		select {
+		case inMsg := <-incoming:
+			fmt.Printf("Command from remote %s, %v \n", inMsg.Frame(), inMsg)
+			home.Do(inMsg)
+			break
+		case err := <-errs:
+			return errors.Wrapf(err, "errors while listening to the Pub/Sub")
+		}
 	}
+	return nil
 }
 
 func basicHelp() {

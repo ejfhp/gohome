@@ -59,16 +59,23 @@ func NewPubSub() (*PubSub, error) {
 	return &pubsub, nil
 }
 
-func (p *PubSub) Listen() <-chan string {
-	pipeOut := make(chan string, 2)
+func (p *PubSub) Listen(home *Home) (<-chan Message, <-chan error) {
+	incoming := make(chan Message, 1)
+	errors := make(chan error)
+	go p.listen(home, incoming, errors)
+	return incoming, errors
+}
+
+func (p *PubSub) listen(home *Home, incoming chan Message, errors chan error) {
 	err := p.inSub.Receive(p.ctx, func(ctx context.Context, m *pubsub.Message) {
 		msgJSON := string(m.Data)
-		pipeOut <- msgJSON
-		log.Printf("Got message: %s", msgJSON)
+		msg := home.Plant.ParseFromJSON(msgJSON)
+		log.Printf("Received p/s message: %s, %v", msgJSON, msg)
+		incoming <- msg
 		m.Ack()
 	})
 	if err != nil {
 		fmt.Printf("PUBSUB error: %v\n", err)
+		errors <- err
 	}
-	return pipeOut
 }

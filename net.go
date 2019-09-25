@@ -37,8 +37,8 @@ type Cable struct {
 
 //Home is a Btcino MyHome plant that can be controlled with a OpenWebNet enabled device (F452 ecc)
 type Home struct {
-	cable *Cable
-	plant *Plant
+	Cable *Cable
+	Plant *Plant
 }
 
 //NewHome creates a new Home connected through the given Cable
@@ -46,7 +46,7 @@ func NewHome(plant *Plant) *Home {
 	log.Printf("NewHome")
 	address := plant.ServerAddress()
 	cable := newCable(address)
-	return &Home{cable: cable, plant: plant}
+	return &Home{Cable: cable, Plant: plant}
 }
 
 //Do some action with your home
@@ -55,7 +55,7 @@ func (h *Home) Do(command Message) error {
 	if command.Kind != COMMAND {
 		return errors.Errorf("Message is not a command: %v", command)
 	}
-	return h.cable.sendCommand(command)
+	return h.Cable.sendCommand(command)
 }
 
 //Ask the system
@@ -64,14 +64,14 @@ func (h *Home) Ask(request Message) ([]Message, error) {
 	if request.Kind != REQUEST && request.Kind != SPECIAL {
 		return nil, errors.Errorf("Message is not a request: %v", request)
 	}
-	frames, err := h.cable.sendRequest(request)
+	frames, err := h.Cable.sendRequest(request)
 	if err != nil {
 		return []Message{}, errors.Wrapf(err, "cannot send request frame '%v'", request)
 	}
 	//TODO parse di tutte le frame
 	res := make([]Message, len(frames))
 	for i, f := range frames {
-		res[i] = h.plant.ParseFrame(f)
+		res[i] = h.Plant.ParseFrame(f)
 	}
 	return res, nil
 }
@@ -80,7 +80,7 @@ func (h *Home) Listen() (<-chan string, chan<- struct{}, <-chan error) {
 	msgChan := make(chan string, 1)
 	signChan := make(chan struct{})
 	errChan := make(chan error)
-	go h.cable.listen(msgChan, signChan, errChan)
+	go h.Cable.listen(msgChan, signChan, errChan)
 	return msgChan, signChan, errChan
 }
 

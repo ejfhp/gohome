@@ -69,4 +69,13 @@ func TestMainListen(t *testing.T) {
 	fmt.Printf("Runned\n")
 }
 
-func TestRemoteControl(t *testing.T) {}
+//gcloud pubsub topics publish calling_home --message='{"who":"LIGHT","what:"TURN_ON", "where":"cucina.main","kind":"COMMAND"}'
+func TestRemoteControl(t *testing.T) {
+	fmt.Printf("Start main..\n")
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode.")
+	}
+	os.Args = []string{"gohome", "remote"}
+	main()
+	fmt.Printf("Runned\n")
+}
