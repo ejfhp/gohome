@@ -15,6 +15,7 @@ go test -short
 */
 
 //gcloud pubsub topics publish calling_home --message={}
+//gcloud pubsub topics publish calling_home --message='{"who":"LIGHT", "where":"camera", "what":"TURN_OFF", "kind":"COMMAND"}'
 func TestPubSubListen(t *testing.T) {
 	plant := makeTestPlant(t)
 	h := gohome.NewHome(plant)
