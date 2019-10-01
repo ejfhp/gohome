@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
@@ -41,6 +43,9 @@ func main() {
 		break
 	case "remote":
 		err = remoteControl()
+		break
+	case "listenT":
+		err = listenTelegram()
 		break
 	default:
 		basicHelp()
@@ -132,6 +137,37 @@ func listen() error {
 				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
 			} else {
 				fmt.Printf(">>>>> message invalid: '%s'\n", f)
+			}
+		}
+	}
+	return nil
+}
+
+func listenTelegram() error {
+	telegramURL := "https://api.telegram.org/bot"
+	chatID := os.Getenv("GOHOME_CHAT_ID")
+	botToken := os.Getenv("GOHOME_HOME_TALKS_TOKEN")
+	home, err := openHome()
+	if err != nil {
+		return errors.Wrapf(err, "cannot open Home")
+	}
+	listen, _, errs := home.Listen()
+	ok := true
+	for ok {
+		select {
+		case e, ok := <-errs:
+			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
+		case f, ok := <-listen:
+			if v, _ := gohome.IsValid(f); v {
+				msg := home.Plant.ParseFrame(f)
+				v := url.Values{}
+				v.Set("chat_id", chatID)
+				v.Set("text", f)
+				url := telegramURL + botToken + "/sendMessage"
+				go func() {
+					http.DefaultClient.PostForm(url, v)
+				}()
+				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
 			}
 		}
 	}
