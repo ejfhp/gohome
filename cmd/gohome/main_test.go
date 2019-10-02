@@ -73,7 +73,7 @@ func TestMainListenTelegram(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	os.Args = []string{"gohome", "listenTelegram"}
+	os.Args = []string{"gohome", "listenT"}
 	main()
 	fmt.Printf("Runned\n")
 }
@@ -84,10 +84,7 @@ func TestRemoteControl(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	os.Args = []string{"gohome", "remote"}
-	//TODO finire di far finire questo pezzo di codice...
+	os.Args = []string{"gohome", "listenT"}
 	main()
 	fmt.Printf("Runned\n")
 }
-
-l

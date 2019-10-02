@@ -13,5 +13,6 @@
 *.out
 cmd/gohome/gohome.json
 gohome.json
+cmd/gohome/gohome
 bot_url.txt
 
