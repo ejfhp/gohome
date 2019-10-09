@@ -13,6 +13,7 @@ import (
 )
 
 const defaultConf = "gohome.json"
+const defaultSysConf = ".gohome/gohome.json"
 
 func main() {
 	//command line must be WHO WHAT WHERE
@@ -158,11 +159,13 @@ func listenTelegram() error {
 		case e, ok := <-errs:
 			fmt.Printf(">>>>> error received (ok? %t): %v\n", ok, e)
 		case f, ok := <-listen:
-			if v, _ := gohome.IsValid(f); v {
+			if mOK, _ := gohome.IsValid(f); mOK {
 				msg := home.Plant.ParseFrame(f)
+				fmt.Printf("got frame %s\n", f)
+				fmt.Printf("JSON frame %s\n", home.Plant.FormatToJSON(msg))
 				v := url.Values{}
 				v.Set("chat_id", chatID)
-				v.Set("text", f)
+				v.Set("text", home.Plant.FormatToJSON(msg))
 				url := telegramURL + botToken + "/sendMessage"
 				go func() {
 					http.DefaultClient.PostForm(url, v)
@@ -188,12 +191,26 @@ func openPlantFile() (*os.File, error) {
 	return config, nil
 }
 
+func openSysPlantFile() (*os.File, error) {
+	homePath := os.Getenv("HOME")
+	plantFilePath := filepath.Join(homePath, defaultSysConf)
+	config, err := os.Open(plantFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
 func openHome() (*gohome.Home, error) {
-	config, err := openPlantFile()
-	defer config.Close()
+	config, err := openSysPlantFile()
+	if err != nil {
+		config, err = openPlantFile()
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot open configuration file: %s", defaultConf)
 	}
+	fmt.Printf("Plant file is: %s \n", config.Name())
+	defer config.Close()
 	plant, err := gohome.NewPlant(config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot load plant from configuration file: %s", defaultConf)
@@ -226,6 +243,7 @@ func remoteControl() error {
 }
 
 func basicHelp() {
+	fmt.Printf("\n")
 	fmt.Printf("GoHome,\n")
 	fmt.Printf("a simple command line tool to control a Bticino MyHome plant.\n")
 	fmt.Printf("\n")
@@ -238,14 +256,16 @@ func basicHelp() {
 }
 
 func advancedHelp(pars []string) {
+	fmt.Printf("\n")
 	fmt.Printf("ADVANCED HELP\n")
-	fmt.Printf("      default configuration file is \"gohome.json\"\n\n")
-	fmt.Printf("      %s  <who> <what> <where>\n", os.Args[0])
-	fmt.Printf("        who:   LIGHT (currently work only on lights)\n")
-	fmt.Printf("        what:  <command>\n")
-	fmt.Printf("        where: <room>.<light> (in case of single light)\n")
-	fmt.Printf("        where: <room>         (in case of ambient)\n")
-	fmt.Printf("        where: general        (in case of general)\n")
+	fmt.Printf("      Default configuration file is \"gohome.json\"\n\n")
+	fmt.Printf("      To perform action on the plant:\n\n")
+	fmt.Printf("      $ %s do <who> <what> <where>\n", os.Args[0])
+	fmt.Printf("             who:   LIGHT (currently work only on lights)\n")
+	fmt.Printf("             what:  <command>\n")
+	fmt.Printf("             where: <room>.<light> (in case of single light)\n")
+	fmt.Printf("             where: <room>         (in case of ambient)\n")
+	fmt.Printf("             where: general        (in case of general)\n")
 	fmt.Printf("\n\nFor LIGHT <command> is one of:\n")
 	for _, v := range gohome.NewWho("LIGHT").Actions {
 		fmt.Printf("      %v\n", v)

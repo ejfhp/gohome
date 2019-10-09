@@ -61,7 +61,7 @@ func NewWho(who string) *Who {
 	return w
 }
 
-func (w Who) WhatFromDesc(text string) (What, error) {
+func (w *Who) WhatFromDesc(text string) (What, error) {
 	for k, v := range w.Actions {
 		if v == strings.ToUpper(text) {
 			return What{Code: k, Desc: v}, nil
@@ -70,7 +70,7 @@ func (w Who) WhatFromDesc(text string) (What, error) {
 	return What{}, ErrWhatNotFound
 }
 
-func (w Who) WhatFromCode(code string) (What, error) {
+func (w *Who) WhatFromCode(code string) (What, error) {
 	desc, ok := w.Actions[code]
 	if !ok {
 		return What{}, ErrWhatNotFound

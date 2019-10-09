@@ -294,7 +294,8 @@ func TestFormatToJSON(t *testing.T) {
 		"":          "{\"who\":\"\",\"what\":\"\",\"where\":\"\",\"kind\":\"INVALID\"}",
 	}
 	for m, ts := range exp {
-		json := plant.FormatToJSON(plant.ParseFrame(m))
+		message := plant.ParseFrame(m)
+		json := plant.FormatToJSON(message)
 		if json != ts {
 			t.Errorf("decoded JSON for message '%s' is wrong: %s!=%s", m, json, ts)
 		}

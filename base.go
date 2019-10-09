@@ -1,9 +1,10 @@
 package gohome
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
-  "encoding/json" 
+
 	"github.com/pkg/errors"
 )
 
@@ -31,32 +32,37 @@ type What struct {
 }
 
 type Message struct {
-	Who     *Who `json:who`
-	What    What `json:what`
-	Where   Where `json:where`
-	Kind    string `json:kind`
+	Who     *Who   `json:"who"`
+	What    What   `json:"what"`
+	Where   Where  `json:"where"`
+	Kind    string `json:"kind"`
 	special string
 }
 
 func (m Message) MarshalJSON() ([]byte, error) {
-	// buffer := bytes.NewBufferString("{")
-	// buffer.WriteString("\"who\": \"")
-	// if m.Who != nil {
-	// 	buffer.WriteString(m.Who.Desc)
-	// }
-	// buffer.WriteString("\", ")
-	// buffer.WriteString("\"what\": \"")
-	// buffer.WriteString(m.What.Desc)
-	// buffer.WriteString("\", ")
-	// buffer.WriteString("\"where\": \"")
-	// buffer.WriteString(m.Where.Desc)
-	// buffer.WriteString("\", ")
-	// buffer.WriteString("\"kind\": \"")
-	// buffer.WriteString(m.Kind)
-	// buffer.WriteString("\"")
-	// buffer.WriteString("}")
-	by, err := json.Marshal(m)
-	return by, err
+	var whoD, whatD, whereD string
+	if m.Who != nil {
+		whoD = m.Who.Desc
+	}
+	if m.What != (What{}) {
+		whatD = m.What.Desc
+	}
+	if m.Where != (Where{}) {
+		whereD = m.Where.Desc
+	}
+	mj := struct {
+		Who   string `json:"who"`
+		What  string `json:"what"`
+		Where string `json:"where"`
+		Kind  string `json:"kind"`
+	}{
+		Who:   whoD,
+		What:  whatD,
+		Where: whereD,
+		Kind:  m.Kind,
+	}
+	js, err := json.Marshal(&mj)
+	return js, err
 }
 
 func (m Message) Frame() string {
