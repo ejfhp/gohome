@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
@@ -13,7 +15,7 @@ import (
 const PROJECT = "gohome-dev"
 const TOPIC = "calling_home"
 const SUBSCRIPTION = "home_listening"
-const DEFAULT_CREDENTIAL = "/data/gohome/gohome-cred.json"
+const defaultCredFile = ".gohome/gohome-cred.json"
 
 var psc *pubsub.Client
 
@@ -27,7 +29,9 @@ type PubSub struct {
 func NewPubSub() (*PubSub, error) {
 	var err error
 	ctx := context.Background()
-	psc, err := pubsub.NewClient(ctx, PROJECT, option.WithCredentialsFile(DEFAULT_CREDENTIAL))
+	homePath := os.Getenv("HOME")
+	credentialPath := filepath.Join(homePath, defaultCredFile)
+	psc, err := pubsub.NewClient(ctx, PROJECT, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot create Pub/Sub client for project %s", PROJECT)
 	}

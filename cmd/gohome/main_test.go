@@ -84,7 +84,7 @@ func TestRemoteControl(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
-	os.Args = []string{"gohome", "listenT"}
+	os.Args = []string{"gohome", "remote"}
 	main()
 	fmt.Printf("Runned\n")
 }

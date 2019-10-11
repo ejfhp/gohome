@@ -161,16 +161,16 @@ func listenTelegram() error {
 		case f, ok := <-listen:
 			if mOK, _ := gohome.IsValid(f); mOK {
 				msg := home.Plant.ParseFrame(f)
-				fmt.Printf("got frame %s\n", f)
-				fmt.Printf("JSON frame %s\n", home.Plant.FormatToJSON(msg))
+				js := home.Plant.FormatToJSON(msg)
+				text := fmt.Sprintf("JSON: %s  of FRAME: %s  RECEIVED_OK: %t", js, f, ok)
+				fmt.Printf("Message to send-> %s\n", text)
 				v := url.Values{}
 				v.Set("chat_id", chatID)
-				v.Set("text", home.Plant.FormatToJSON(msg))
+				v.Set("text", text)
 				url := telegramURL + botToken + "/sendMessage"
 				go func() {
 					http.DefaultClient.PostForm(url, v)
 				}()
-				fmt.Printf(">>>>> received (ok? %t): '%s' '%s' '%s'  msg: '%v'\n", ok, msg.Who.Desc, msg.What.Desc, msg.Where.Desc, msg.Kind)
 			}
 		}
 	}
@@ -232,7 +232,7 @@ func remoteControl() error {
 	for true {
 		select {
 		case inMsg := <-incoming:
-			fmt.Printf("Command from remote %s, %v \n", inMsg.Frame(), inMsg)
+			fmt.Printf("Received from remote JSON: %s  FRAME: %s \n", home.Plant.FormatToJSON(inMsg), inMsg.Frame())
 			home.Do(inMsg)
 			break
 		case err := <-errs:
